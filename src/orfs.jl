@@ -2,7 +2,7 @@ using Artifacts
 using BioSequences
 using FASTX
 
-const emmamodels = joinpath(artifact"Emma-models", "emma-models-0.1.1-alpha")
+const emmamodels = joinpath(artifact"Emma-models", "emma-models-0.1.4-alpha")
 
 #NCBI translation table 5, minus UUG start
 const startcodon = biore"(ATT)|(ATC)|(ATA)|(ATG)|(GTG)"d
@@ -38,12 +38,12 @@ function getorfs!(writer::FASTA.Writer, id::String, genome::CircularSequence, st
     end
 end
 
-function hmmsearch(id::String, genome::CircularSequence, minORF::Int)
+function orfsearch(id::String, genome::CircularSequence, minORF::Int)
     writer = open(FASTA.Writer, "tmp.orfs.fa")
     getorfs!(writer, id, genome, '+', minORF)
     getorfs!(writer, id, reverse_complement(genome), '-', minORF)
     close(writer)
-    hmmpath = joinpath(emmamodels, "hmms", "all.hmm")
+    hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     cmd = `hmmsearch --domtblout tmp.domt $hmmpath tmp.orfs.fa`
     outfile = "tmp.hmmsearch.out"
     run(pipeline(cmd, stdout=outfile))

@@ -1,4 +1,4 @@
-struct CMAlignment
+struct CMAlignment_trn
     query::String
     target::String
     Evalue::Float64
@@ -57,8 +57,8 @@ function anticodon(qfrom::Int, qseq::AbstractString, tseq::AbstractString, pos::
     return missing
 end
 
-function parse_alignments(file::String, glength::Integer)
-    alignments = CMAlignment[]
+function parse_trn_alignments(file::String, glength::Integer)
+    alignments = CMAlignment_trn[]
     open(file, "r") do infile
         while !eof(infile)
             line = readline(infile)
@@ -89,7 +89,7 @@ function parse_alignments(file::String, glength::Integer)
             trn = model2trn[query]
             anticodonpos = trn2anticodonpos[trn]
             qfrom = parse(Int, bits[7])
-            push!(alignments, CMAlignment(trn, target, parse(Float64, bits[3]),
+            push!(alignments, CMAlignment_trn(trn, target, parse(Float64, bits[3]),
                 qfrom, parse(Int, bits[8]), tfrom, tto, tstrand,
                 tseq, anticodon(qfrom, qseq, tseq, anticodonpos), false))
         end
@@ -97,23 +97,19 @@ function parse_alignments(file::String, glength::Integer)
     return alignments
 end
 
-function cmsearch(id::String, genome::CircularSequence)
-    extended_genome = genome[1:length(genome)+100]
-    writer = open(FASTA.Writer, "tmp.extended.fa")
-    write(writer, FASTA.Record(id, extended_genome))
-    close(writer)
-    cmpath = joinpath(emmamodels, "cms", "all.cm")
+function cmsearch(modeldir::String, modelfile::String)
+    cmpath = joinpath(emmamodels, modeldir, modelfile)
     cmd = `cmsearch $cmpath tmp.extended.fa`
     outfile = "tmp.cmsearch.out"
     run(pipeline(cmd, stdout=outfile))
     return outfile
 end
 
-function cmsearch(id::String, tRNA::LongDNA{2})
+function cmsearch(id::String, modeldir::String, tRNA::LongDNA{2})
     writer = open(FASTA.Writer, "tmp.fa")
     write(writer, FASTA.Record(id, tRNA))
     close(writer)
-    cmpath = joinpath(emmamodels, "cms", trn2model[id] * ".cm")
+    cmpath = joinpath(emmamodels, modeldir, trn2model[id] * ".cm")
     cmd = `cmsearch $cmpath tmp.fa`
     outfile = "tmp.cmsearch.out"
     run(pipeline(cmd, stdout=outfile))
