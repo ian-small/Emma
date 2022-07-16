@@ -101,3 +101,30 @@ struct rRNA
     start::Vector{nHMMmatch}
     stop::Vector{CMAlignment_rrn}
 end
+
+function gettermini(rrn::rRNA, glength::Integer)
+    sort!(rrn.start, by = x -> x.Evalue)
+    sort!(rrn.stop, by = x -> x.Evalue)
+    local start, stop
+    if isempty(rrn.start)
+        start = rrn.stop[1].tstrand =='+' ? rrn.stop[1].tfrom : reverse_complement(rrn.stop[1].tto, glength)
+        stop = rrn.stop[1].tstrand =='+' ? rrn.stop[1].tto : reverse_complement(rrn.stop[1].tfrom, glength)
+    else
+        start = rrn.stop[1].tstrand =='+' ? rrn.start[1].ali_from : reverse_complement(rrn.stop[1].tto, glength)
+        stop = rrn.stop[1].tstrand =='+' ? rrn.stop[1].tto : rrn.start[1].ali_from
+    end
+    return start, stop
+end
+
+function getevalue(rrn::rRNA)
+    sort!(rrn.start, by = x -> x.Evalue)
+    sort!(rrn.stop, by = x -> x.Evalue)
+    evalues = []
+    if !isempty(rrn.start)
+        push!(evalues, rrn.start[1].Evalue)
+    end
+    if !isempty(rrn.stop)
+        push!(evalues, rrn.stop[1].Evalue)
+    end
+    return minimum(evalues)
+end

@@ -10,7 +10,7 @@ struct GFF
 end
 
 function HMMmatch2GFF(cds::HMMmatch, genome_length::Integer)
-    bits = split(cds.orf, "_")
+    bits = split(cds.orf, "*")
     ends = split(bits[3], "-")
     strand = bits[2][1]
     start = parse(Int, ends[1])
@@ -38,15 +38,10 @@ function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
 end
 
 function rRNA2GFF(rrn::rRNA, glength::Integer)
-    #sort starts and ends by Evalue
-    sort!(rrn.start, by = x -> x.Evalue)
-    sort!(rrn.stop, by = x -> x.Evalue)
-    rrnstart = rrn.start[1]
-    rrnstop = rrn.stop[1]
-    startstring = rrnstop.tstrand =='+' ? string(rrnstart.ali_from) : string(reverse_complement(rrnstop.tto, glength))
-    finishstring = rrnstop.tstrand =='+' ? string(rrnstop.tto) : string(rrnstart.ali_from)
-    attributes = "Name=" * rrnstop.query
-    return GFF("Emma", "rRNA match", startstring, finishstring, string(min(rrnstart.Evalue, rrnstop.Evalue)), rrnstop.tstrand, "0", attributes)
+    start, stop = gettermini(rrn, glength)
+    attributes = "Name=" * rrn.stop[1].query
+    evalue = getevalue(rrn)
+    return GFF("Emma", "rRNA match", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, "0", attributes)
 end
 
 function writeGFF(outfile::String, id::String, genome_length::Integer, cds_matches::Vector{HMMmatch},

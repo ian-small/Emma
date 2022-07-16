@@ -33,7 +33,7 @@ function getorfs!(writer::FASTA.Writer, id::String, genome::CircularSequence, st
             nextstop - nextstart + 1 < minORF && continue
             translation = translate(genome.sequence[nextstart:(nextstop-1)], code = ncbi_trans_table[5])
             translation[1] = AA_M
-            write(writer, FASTA.Record(id * "_" * strand * "_" * string(nextstart) * "-" * string(nextstop), translation))
+            write(writer, FASTA.Record(id * "*" * strand * "*" * string(nextstart) * "-" * string(nextstop), translation))
         end
     end
 end
@@ -90,4 +90,11 @@ function parse_domt(file::String)
         end
     end
     return matches
+end
+
+function merge_hmm_matches(match1::HMMmatch, match2::HMMmatch)
+    @assert match1.orf == match2.orf && match1.query == match2.query
+    return HMMmatch(match1.orf, match1.tlen, match1.query, match1.qlen, match1.Evalue, match1.score,
+    min(match1.hmm_from, match2.hmm_from), max(match1.hmm_to, match2.hmm_to), min(match1.ali_from, match2.ali_from),
+    max(match1.ali_to, match2.ali_to), min(match1.env_from, match2.env_from), max(match1.ali_to, match2.ali_to))
 end

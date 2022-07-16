@@ -47,7 +47,9 @@ function main(infile::String, outfile::String)
     for (cma, trunc_end) in overlapped
         trnseq = cma.tstrand == '+' ? genome.sequence[cma.tfrom:trunc_end] : rev_genome_seq[cma.tfrom:trunc_end]
         trnseq_polyA = trnseq * dna"AAAAAAAAAA"
-        trn_match = parse_trn_alignments(cmsearch(cma.query, "trn", trnseq_polyA), 0)[1]
+        polyA_matches = parse_trn_alignments(cmsearch(cma.query, "trn", trnseq_polyA), 0)
+        isempty(polyA_matches) && continue
+        trn_match = polyA_matches[1]
         if trn_match.Evalue < cma.Evalue
             #construct modified CMA with new Evalue, new end point, polyA flag
             newcma = CMAlignment_trn(cma.query, cma.target, trn_match.Evalue,
@@ -90,15 +92,34 @@ function main(infile::String, outfile::String)
 
     #find CDSs
     cds_matches = parse_domt(orfsearch(id, genome, minORF))
-    filter!(x -> x.Evalue < 1e-10, cds_matches)
-
+    #rationalise HMM matches to leave one per ORF
+    #sort by ORF, HMM, genome position
+    sort!(cds_matches, by = x -> (x.orf, x.query, x.ali_from))
+    #merge adjacent matches to same HMM
+    #drop HMM matches that score lower than other overlapping matches
+    rationalised_cds_matches = HMMmatch[]
+    current_cds_match = first(cds_matches)
+    for i in 2:length(cds_matches)
+        cds_match = cds_matches[i]
+        if cds_match.orf == current_cds_match.orf
+            if cds_match.query == current_cds_match.query
+                current_cds_match = merge_hmm_matches(current_cds_match, cds_match)
+            elseif cds_match.Evalue < current_cds_match.Evalue
+                current_cds_match = cds_match
+            end
+        else
+            push!(rationalised_cds_matches, current_cds_match)
+            current_cds_match = cds_match
+        end
+    end
+    push!(rationalised_cds_matches, current_cds_match)
     #fix start codons
 
     #fix stop codons
 
     println(cds_matches)
 
-    writeGFF(outfile, id, length(genome), cds_matches, trn_matches, rRNAs)
+    writeGFF(outfile, id, length(genome), rationalised_cds_matches, trn_matches, rRNAs)
 end
 
 main(ARGS[1], ARGS[2])
