@@ -25,6 +25,10 @@ function HMMmatch2GFF(cds::HMMmatch, genome_length::Integer)
         hmmstart = reverse_complement(hmmfinish, genome_length)
         hmmfinish = reverse_complement(tmp, genome_length)
     end
+    if hmmstart > genome_length
+        hmmstart = mod1(hmmstart, genome_length)
+        hmmfinish = mod1(hmmfinish, genome_length)
+    end
     return [GFF("Emma", "ORF", string(start), string(finish), string(cds.Evalue), strand, "0", "Name=" * cds.query * "_ORF"),
         GFF("Emma", "HMM alignment", string(hmmstart), string(hmmfinish), string(cds.Evalue), strand, "0", "Name=" * cds.query * "_HMM")]
 end
