@@ -4,6 +4,8 @@ include("tRNAs.jl")
 include("rRNAs.jl")
 include("gff.jl")
 
+using XGBoost
+
 const minORF = 150
 
 function get_overlapped_trns(trns::Vector{CMAlignment_trn}, glength::Integer)
@@ -25,7 +27,7 @@ function main(infile::String, outfile::String)
     read!(reader, target)
     id = FASTA.identifier(target)
     genome = CircularSequence(FASTA.sequence(LongDNA{4}, target))
-    rev_genome_seq = BioSequences.reverse_complement(genome.sequence)
+    rev_genome = reverse_complement(genome)
     println(id, "\t", length(genome))
 
     #extend genome
@@ -45,7 +47,7 @@ function main(infile::String, outfile::String)
     println(overlapped)
     #for overlapped tRNAs, generate polyadenylated version
     for (cma, trunc_end) in overlapped
-        trnseq = cma.tstrand == '+' ? genome.sequence[cma.tfrom:trunc_end] : rev_genome_seq[cma.tfrom:trunc_end]
+        trnseq = cma.tstrand == '+' ? genome.sequence[cma.tfrom:trunc_end] : rev_genome.sequence[cma.tfrom:trunc_end]
         trnseq_polyA = trnseq * dna"AAAAAAAAAA"
         polyA_matches = parse_trn_alignments(cmsearch(cma.query, "trn", trnseq_polyA), 0)
         isempty(polyA_matches) && continue
@@ -61,6 +63,7 @@ function main(infile::String, outfile::String)
             push!(trn_matches, newcma)
         end
     end
+    sort!(trn_matches, by=x->x.tfrom)
     println(trn_matches)
 
     #find rRNAs
@@ -91,7 +94,11 @@ function main(infile::String, outfile::String)
     println(rRNAs)
 
     #find CDSs
-    cds_matches = parse_domt(orfsearch(id, genome, minORF))
+    fstarts, fstartcodons = getcodons(genome, startcodon)
+    fstops = codonmatches(genome, stopcodon)
+    rstarts, rstartcodons = getcodons(rev_genome, startcodon)
+    rstops = codonmatches(rev_genome, stopcodon)
+    cds_matches = parse_domt(orfsearch(id, genome, fstarts, fstops, rstarts, rstops, minORF), length(genome))
     #rationalise HMM matches to leave one per ORF
     #sort by ORF, HMM, genome position
     sort!(cds_matches, by = x -> (x.orf, x.query, x.ali_from))
@@ -113,13 +120,16 @@ function main(infile::String, outfile::String)
         end
     end
     push!(rationalised_cds_matches, current_cds_match)
-    #fix start codons
-
-    #fix stop codons
-
-    println(cds_matches)
-
-    writeGFF(outfile, id, length(genome), rationalised_cds_matches, trn_matches, rRNAs)
+    #fix start & stop codons
+    #load XGBoost model
+    startcodon_model = Booster(model_file=joinpath(emmamodels, "xgb.model"))
+    ftrns = filter(x->x.tstrand == '+', trn_matches)
+    rtrns = filter(x->x.tstrand == '-', trn_matches)
+    fhmms = filter(x->x.strand == '+', rationalised_cds_matches)
+    rhmms = filter(x->x.strand == '-', rationalised_cds_matches)
+    fix_start_and_stop_codons!(fhmms, ftrns, fstarts, fstartcodons, fstops, startcodon_model, length(genome))
+    fix_start_and_stop_codons!(rhmms, rtrns, rstarts, rstartcodons, rstops, startcodon_model, length(genome))
+    writeGFF(outfile, id, length(genome), append!(fhmms,rhmms), trn_matches, rRNAs)
 end
 
 main(ARGS[1], ARGS[2])

@@ -31,7 +31,11 @@ function Base.sum(cv::CircularVector, r::UnitRange{<:Integer})
     return sum
 end
 
-function circularintersect(r1::UnitRange, r2::UnitRange, d::Int32)::UnitRange{Int32}
+function circulardistance(x::Integer, y::Integer, c::Integer)
+    return y > x ? y - x : c + y - x
+end
+
+function circularintersect(r1::UnitRange, r2::UnitRange, c::Int32)::UnitRange{Int32}
     maxintersect = UnitRange{Int32}(0, -1)
     maxintersectlength = 0
     i1 = intersect(r1, r2)
@@ -39,22 +43,22 @@ function circularintersect(r1::UnitRange, r2::UnitRange, d::Int32)::UnitRange{In
         maxintersect = i1
         maxintersectlength = length(i1)
     end
-    if r2.stop > d
-        i2 = intersect(r1 .+ d, r2)
+    if r2.stop > c
+        i2 = intersect(r1 .+ c, r2)
         if length(i2) > maxintersectlength
             maxintersect = i2
             maxintersectlength = length(i2)
         end
     end
-    if r1.stop > d
-        i3 = intersect(r1, r2 .+ d)
+    if r1.stop > c
+        i3 = intersect(r1, r2 .+ c)
         if length(i3) > maxintersectlength
             maxintersect = i3
             maxintersectlength = length(i3)
         end
     end
-    if maxintersect.start > d
-        maxintersect = maxintersect .- d
+    if maxintersect.start > c
+        maxintersect = maxintersect .- c
     end
     return maxintersect
 end

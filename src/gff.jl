@@ -10,27 +10,18 @@ struct GFF
 end
 
 function HMMmatch2GFF(cds::HMMmatch, genome_length::Integer)
-    bits = split(cds.orf, "*")
-    ends = split(bits[3], "-")
-    strand = bits[2][1]
-    start = parse(Int, ends[1])
-    finish = parse(Int, ends[2])
-    hmmstart = start + 3*(cds.ali_from-1)
-    hmmfinish = start + 3*(cds.ali_to - cds.ali_from + 1) - 1
-    if strand == '-'
-        tmp = start
-        start = reverse_complement(finish, genome_length)
-        finish = reverse_complement(tmp, genome_length)
-        tmp = hmmstart
-        hmmstart = reverse_complement(hmmfinish, genome_length)
-        hmmfinish = reverse_complement(tmp, genome_length)
+    cdsstart = cds.ali_from
+    cdsstop = cds.ali_to + 2
+    if cds.strand == '-'
+        tmp = cdsstart
+        cdsstart = reverse_complement(cdsstop, genome_length)
+        cdsstop = reverse_complement(tmp, genome_length)
     end
-    if hmmstart > genome_length
-        hmmstart = mod1(hmmstart, genome_length)
-        hmmfinish = mod1(hmmfinish, genome_length)
+    if cdsstart > genome_length
+        cdsstart = mod1(cdsstart, genome_length)
+        cdsstop = mod1(cdsstop, genome_length)
     end
-    return [GFF("Emma", "ORF", string(start), string(finish), string(cds.Evalue), strand, "0", "Name=" * cds.query * "_ORF"),
-        GFF("Emma", "HMM alignment", string(hmmstart), string(hmmfinish), string(cds.Evalue), strand, "0", "Name=" * cds.query * "_HMM")]
+    return GFF("Emma", "CDS", string(cdsstart), string(cdsstop), string(cds.Evalue), cds.strand, "0", "Name=" * cds.query * "_HMM")
 end
 
 function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
@@ -38,14 +29,14 @@ function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
     finishstring = trn.tstrand =='+' ? string(trn.tto) : string(reverse_complement(trn.tfrom, glength))
     attributes = "Name=" * trn.query * "-" * trn.anticodon
     if trn.polyA; attributes *= ";Note=Sequence completed by polyadenylation";end
-    return GFF("Emma", "tRNA match", startstring, finishstring, string(trn.Evalue), trn.tstrand, "0", attributes)
+    return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, "0", attributes)
 end
 
 function rRNA2GFF(rrn::rRNA, glength::Integer)
     start, stop = gettermini(rrn, glength)
     attributes = "Name=" * rrn.stop[1].query
     evalue = getevalue(rrn)
-    return GFF("Emma", "rRNA match", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, "0", attributes)
+    return GFF("Emma", "rRNA", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, "0", attributes)
 end
 
 function writeGFF(outfile::String, id::String, genome_length::Integer, cds_matches::Vector{HMMmatch},
@@ -57,10 +48,8 @@ function writeGFF(outfile::String, id::String, genome_length::Integer, cds_match
 
     open(outfile, "w") do out
         for cds in cds_matches
-            gffs = HMMmatch2GFF(cds, genome_length)
-            for gff in gffs
-                writeone(out, gff)
-            end
+            gff = HMMmatch2GFF(cds, genome_length)
+            writeone(out, gff)
         end
         for trn in trn_matches
             gff = CMAlignment2GFF(trn, genome_length)

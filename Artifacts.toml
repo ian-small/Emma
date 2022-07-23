@@ -1,6 +1,6 @@
 [Emma-models]
-git-tree-sha1 = "d2cece81c9f44954400a753a5f3532fea7efbee9"
+git-tree-sha1 = "9a5922a3c72dc2e84be44e8f2eecfe73c9c2b3ec"
 
     [[Emma-models.download]]
-    sha256 = "52f48874d9f2667a28c87de3c90e4843ae0165efa8725268de5bb1eb7ee0fe87"
-    url = "https://github.com/ian-small/emma-models/archive/refs/tags/v0.1.4-alpha.tar.gz"
+    sha256 = "3678e8c020a7c3a13aa727db8e8f9fefce1d3fec81707229b8d1e733a3263bb1"
+    url = "https://github.com/ian-small/emma-models/archive/refs/tags/v0.1.5-alpha.tar.gz"
