@@ -12,6 +12,13 @@ end
 function HMMmatch2GFF(cds::HMMmatch, genome_length::Integer)
     cdsstart = cds.ali_from
     cdsstop = cds.ali_to + 2
+    attributes = "Name=" * cds.query
+    stopphase = mod(cdsstop-cdsstart+1, 3)
+    if stopphase ≠ 0
+        As_to_add = 3-stopphase
+        attributes *= ";Note=transcript completed by post-transcriptional addition of " * string(As_to_add)
+        attributes *= As_to_add > 1 ? " As" : " A"
+    end
     if cds.strand == '-'
         tmp = cdsstart
         cdsstart = reverse_complement(cdsstop, genome_length)
@@ -21,14 +28,17 @@ function HMMmatch2GFF(cds::HMMmatch, genome_length::Integer)
         cdsstart = mod1(cdsstart, genome_length)
         cdsstop = mod1(cdsstop, genome_length)
     end
-    return GFF("Emma", "CDS", string(cdsstart), string(cdsstop), string(cds.Evalue), cds.strand, "0", "Name=" * cds.query * "_HMM")
+    return GFF("Emma", "CDS", string(cdsstart), string(cdsstop), string(cds.Evalue), cds.strand, "0", attributes)
 end
 
 function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
     startstring = trn.tstrand =='+' ? string(trn.tfrom) : string(reverse_complement(trn.tto, glength))
     finishstring = trn.tstrand =='+' ? string(trn.tto) : string(reverse_complement(trn.tfrom, glength))
     attributes = "Name=" * trn.query * "-" * trn.anticodon
-    if trn.polyA; attributes *= ";Note=Sequence completed by polyadenylation";end
+    if trn.polyA > 0
+        attributes *= ";Note=tRNA completed by post-transcriptional addition of " * string(trn.polyA)
+        attributes *= trn.polyA > 1 ? " As" : " A"
+    end
     return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, "0", attributes)
 end
 

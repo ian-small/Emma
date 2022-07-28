@@ -56,7 +56,7 @@ function main(infile::String, outfile::String)
             #construct modified CMA with new Evalue, new end point, polyA flag
             newcma = CMAlignment_trn(cma.query, cma.target, trn_match.Evalue,
             trn_match.qfrom, trn_match.qto, cma.tfrom, trunc_end, cma.tstrand,
-            trn_match.tseq, trn_match.anticodon, true)
+            trn_match.tseq, trn_match.anticodon, (trn_match.tto - trn_match.tfrom) - (trunc_end - cma.tfrom))
             #delete old match from trn_matches
             deleteat!(trn_matches, findfirst(x -> x == cma, trn_matches))
             #add new CMA

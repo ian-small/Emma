@@ -16,7 +16,7 @@ struct CMAlignment_trn
     #qseq::String
     tseq::String
     anticodon::Union{String,Missing}
-    polyA::Bool #true if sequence completed by polyadenylation
+    polyA::Int #> 0 if sequence completed by polyadenylation
 end
 
 const anticodon2trn = Dict("UGC"=>"trnA","GCA"=>"trnC","GUC"=>"trnD","UUC"=>"trnE","GAA"=>"trnF","UCC"=>"trnG",
@@ -91,7 +91,7 @@ function parse_trn_alignments(file::String, glength::Integer)
             qfrom = parse(Int, bits[7])
             push!(alignments, CMAlignment_trn(trn, target, parse(Float64, bits[3]),
                 qfrom, parse(Int, bits[8]), tfrom, tto, tstrand,
-                tseq, anticodon(qfrom, qseq, tseq, anticodonpos), false))
+                tseq, anticodon(qfrom, qseq, tseq, anticodonpos), 0))
         end
     end
     return alignments
