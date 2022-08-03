@@ -39,21 +39,24 @@ function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
         attributes *= ";Note=tRNA completed by post-transcriptional addition of " * string(trn.polyA)
         attributes *= trn.polyA > 1 ? " As" : " A"
     end
-    return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, "0", attributes)
+    return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, ".", attributes)
 end
 
 function rRNA2GFF(rrn::rRNA, glength::Integer)
     start, stop = gettermini(rrn, glength)
     attributes = "Name=" * rrn.stop[1].query
     evalue = getevalue(rrn)
-    return GFF("Emma", "rRNA", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, "0", attributes)
+    return GFF("Emma", "rRNA", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, ".", attributes)
 end
 
 function writeGFF(outfile::String, id::String, genome_length::Integer, cds_matches::Vector{HMMmatch},
              trn_matches::Vector{CMAlignment_trn}, rRNAs::NamedTuple{(:rrnL, :rrnS), Tuple{rRNA, rRNA}})
 
+    gffs = GFF[]
+
     function writeone(out::IO, gff::GFF)
         write(out, join([id, gff.source, gff.ftype,gff.fstart,gff.fend,gff.score,gff.strand,gff.phase,gff.attributes], "\t"), "\n")
+        push!(gffs, gff)
     end
 
     open(outfile, "w") do out
@@ -70,4 +73,6 @@ function writeGFF(outfile::String, id::String, genome_length::Integer, cds_match
         gff = rRNA2GFF(rRNAs.rrnS, genome_length)
         writeone(out, gff)
     end
+
+    return gffs
 end

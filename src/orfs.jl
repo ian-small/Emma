@@ -42,7 +42,7 @@ function getorfs!(writer::FASTA.Writer, id::String, genome::CircularSequence, st
             nextstartidx > length(starts[f]) && break
             nextstart = starts[f][nextstartidx]
             nextstop - nextstart + 1 < minORF && continue
-            translation = translate(genome.sequence[nextstart:(nextstop-1)], code = ncbi_trans_table[5])
+            translation = BioSequences.translate(genome.sequence[nextstart:(nextstop-1)], code = ncbi_trans_table[5])
             translation[1] = AA_M
             write(writer, FASTA.Record(id * "*" * strand * "*" * string(nextstart) * "-" * string(nextstop), translation))
         end

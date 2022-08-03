@@ -3,6 +3,7 @@ include("orfs.jl")
 include("tRNAs.jl")
 include("rRNAs.jl")
 include("gff.jl")
+include("visuals.jl")
 
 using XGBoost
 
@@ -21,7 +22,7 @@ function get_overlapped_trns(trns::Vector{CMAlignment_trn}, glength::Integer)
     return overlapped
 end
 
-function main(infile::String, outfile::String)
+function main(infile::String, outfile::String, svgfile::String)
     target = FASTA.Record()
     reader = open(FASTA.Reader, infile)
     read!(reader, target)
@@ -129,9 +130,12 @@ function main(infile::String, outfile::String)
     rhmms = filter(x->x.strand == '-', rationalised_cds_matches)
     fix_start_and_stop_codons!(fhmms, ftrns, fstarts, fstartcodons, fstops, startcodon_model, length(genome))
     fix_start_and_stop_codons!(rhmms, rtrns, rstarts, rstartcodons, rstops, startcodon_model, length(genome))
-    writeGFF(outfile, id, length(genome), append!(fhmms,rhmms), trn_matches, rRNAs)
+    gffs = writeGFF(outfile, id, length(genome), append!(fhmms,rhmms), trn_matches, rRNAs)
+    drawgenome(svgfile, id, length(genome), gffs)
 end
 
-main(ARGS[1], ARGS[2])
+main(ARGS[1], ARGS[2], ARGS[3])
 
 #ARGS[1] = fasta input
+#ARGS[2] = gff output
+#ARGS[3] = svg output
