@@ -86,12 +86,17 @@ function parse_trn_alignments(file::String, glength::Integer)
                 tto = reverse_complement(tto, glength)
             end
             #find anticodon position
-            trn = model2trn[query]
-            anticodonpos = trn2anticodonpos[trn]
             qfrom = parse(Int, bits[7])
-            push!(alignments, CMAlignment_trn(trn, target, parse(Float64, bits[3]),
+            name = model2trn[query]
+            anticodonpos = trn2anticodonpos[name]
+            anticod = anticodon(qfrom, qseq, tseq, anticodonpos)
+            if haskey(anticodon2trn, anticod) == true
+                trn = anticodon2trn[anticodon(qfrom, qseq, tseq, anticodonpos)]
+                push!(alignments, CMAlignment_trn(trn, target, parse(Float64, bits[3]),
                 qfrom, parse(Int, bits[8]), tfrom, tto, tstrand,
-                tseq, anticodon(qfrom, qseq, tseq, anticodonpos), 0))
+                tseq, anticod, 0))
+            end
+            
         end
     end
     return alignments

@@ -22,6 +22,25 @@ function get_overlapped_trns(trns::Vector{CMAlignment_trn}, glength::Integer)
     return overlapped
 end
 
+function get_best_trns(vector)
+    trns = CMAlignment_trn[]
+    for f in 1:length(vector)
+        trn = []
+        push!(trn, vector[f])
+        for i in 1:length(vector)
+            if abs(vector[f].tfrom - vector[i].tfrom) <= 5
+                push!(trn, vector[i])
+            end
+        end
+        sort!(trn, by=x->x.Evalue)
+        println(trn[1])
+        best = first(trn)
+        push!(trns, best)
+    end
+    return trns
+end          
+
+
 function main(infile::String, outfile::String, svgfile::String)
     target = FASTA.Record()
     reader = open(FASTA.Reader, infile)
@@ -29,7 +48,7 @@ function main(infile::String, outfile::String, svgfile::String)
     id = FASTA.identifier(target)
     genome = CircularSequence(FASTA.sequence(LongDNA{4}, target))
     rev_genome = reverse_complement(genome)
-    println(id, "\t", length(genome))
+    #println(id, "\t", length(genome))
 
     #extend genome
     extended_genome = genome[1:length(genome)+100]
@@ -39,13 +58,13 @@ function main(infile::String, outfile::String, svgfile::String)
 
     #find tRNAs
     trn_matches = parse_trn_alignments(cmsearch("trn", "all_trn.cm"), length(genome))
-    filter!(x -> isequal(x.query, get(anticodon2trn, x.anticodon, "")), trn_matches)
+    #filter!(x -> isequal(x.query, get(anticodon2trn, x.anticodon, "")), trn_matches)
     filter!(x -> x.Evalue < 1e-4, trn_matches)
     filter!(x -> x.tfrom <= length(genome), trn_matches)
     #check for overlapping tRNAs
     overlapped = get_overlapped_trns(sort(filter(x -> x.tstrand == '+', trn_matches), by=x->x.tfrom), length(genome))
     append!(overlapped, get_overlapped_trns(sort(filter(x -> x.tstrand == '-', trn_matches), by=x->x.tfrom), length(genome)))
-    println(overlapped)
+    #println(overlapped)
     #for overlapped tRNAs, generate polyadenylated version
     for (cma, trunc_end) in overlapped
         trnseq = cma.tstrand == '+' ? genome.sequence[cma.tfrom:trunc_end] : rev_genome.sequence[cma.tfrom:trunc_end]
@@ -64,8 +83,10 @@ function main(infile::String, outfile::String, svgfile::String)
             push!(trn_matches, newcma)
         end
     end
-    sort!(trn_matches, by=x->x.tfrom)
-    println(trn_matches)
+    sort!(trn_matches, by=x->x.Evalue)
+    trn_matches = unique!(get_best_trns(trn_matches))
+
+    #println(trn_matches)
 
     #find rRNAs
     rRNAs = (rrnL = rRNA(Vector{nHMMmatch}(undef, 0), Vector{CMAlignment_rrn}(undef, 0)),
@@ -92,7 +113,7 @@ function main(infile::String, outfile::String, svgfile::String)
     end
     #fix ends using flanking trn genes
 
-    println(rRNAs)
+    #println(rRNAs)
 
     #find CDSs
     fstarts, fstartcodons = getcodons(genome, startcodon)

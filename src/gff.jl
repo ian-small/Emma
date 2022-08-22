@@ -39,7 +39,11 @@ function CMAlignment2GFF(trn::CMAlignment_trn, glength::Integer)
         attributes *= ";Note=tRNA completed by post-transcriptional addition of " * string(trn.polyA)
         attributes *= trn.polyA > 1 ? " As" : " A"
     end
-    return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, ".", attributes)
+    if typeof(attributes) != Missing
+        return GFF("Emma", "tRNA", startstring, finishstring, string(trn.Evalue), trn.tstrand, ".", attributes)
+    else 
+        return nothing
+    end
 end
 
 function rRNA2GFF(rrn::rRNA, glength::Integer)
@@ -66,7 +70,9 @@ function writeGFF(outfile::String, id::String, genome_length::Integer, cds_match
         end
         for trn in trn_matches
             gff = CMAlignment2GFF(trn, genome_length)
-            writeone(out, gff)
+            if typeof(gff) != Nothing
+                writeone(out, gff)
+            end
         end
         gff = rRNA2GFF(rRNAs.rrnL, genome_length)
         writeone(out, gff)
