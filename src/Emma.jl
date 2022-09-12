@@ -22,26 +22,34 @@ function get_overlapped_trns(trns::Vector{CMAlignment_trn}, glength::Integer)
     return overlapped
 end
 
-function get_best_trns(vector)
-    trns = CMAlignment_trn[]
-    for f in 1:length(vector)
-        trn = []
-        push!(trn, vector[f])
-        for i in 1:length(vector)
-            if abs(vector[f].tfrom - vector[i].tfrom) <= 5
-                push!(trn, vector[i])
+function get_best_trns(trn_hits::Vector{CMAlignment_trn})
+    best_trns = CMAlignment_trn[]
+    trn_groups = Vector{Vector{CMAlignment_trn}}(undef, 0)
+    sort!(trn_hits, by = x -> (x.tstrand, x.tfrom))
+    for trn in trn_hits
+        if length(trn_groups) == 0
+            push!(trn_groups, [trn])
+        else
+            last_group = last(trn_groups)
+            minstart = minimum([x.tfrom for x in last_group])
+            maxend = maximum([x.tto for x in last_group])
+            overlap = length(intersect(trn.tfrom:trn.tto, minstart:maxend))
+            if overlap > 10 #arbitrary overlap!
+                push!(last_group, trn)
+            else
+                push!(trn_groups, [trn])
             end
         end
-        sort!(trn, by=x->x.Evalue)
-        println(trn[1])
-        best = first(trn)
-        push!(trns, best)
     end
-    return trns
+    for tg in trn_groups
+        sort!(tg, by=x->x.Evalue)
+        push!(best_trns, first(tg))
+    end
+    return unique!(best_trns)
 end          
 
 
-function main(infile::String, outfile::String, svgfile::String)
+function main(infile::String, outfile::String, svgfile::Union{String, Nothing} = nothing)
     target = FASTA.Record()
     reader = open(FASTA.Reader, infile)
     read!(reader, target)
@@ -83,9 +91,7 @@ function main(infile::String, outfile::String, svgfile::String)
             push!(trn_matches, newcma)
         end
     end
-    sort!(trn_matches, by=x->x.Evalue)
-    trn_matches = unique!(get_best_trns(trn_matches))
-
+    trn_matches = get_best_trns(trn_matches)
     #println(trn_matches)
 
     #find rRNAs
@@ -152,10 +158,12 @@ function main(infile::String, outfile::String, svgfile::String)
     fix_start_and_stop_codons!(fhmms, ftrns, fstarts, fstartcodons, fstops, startcodon_model, length(genome))
     fix_start_and_stop_codons!(rhmms, rtrns, rstarts, rstartcodons, rstops, startcodon_model, length(genome))
     gffs = writeGFF(outfile, id, length(genome), append!(fhmms,rhmms), trn_matches, rRNAs)
-    drawgenome(svgfile, id, length(genome), gffs)
+    if (!isnothing(svgfile))
+        drawgenome(svgfile, id, length(genome), gffs)
+    end
 end
 
-main(ARGS[1], ARGS[2], ARGS[3])
+main(ARGS...)
 
 #ARGS[1] = fasta input
 #ARGS[2] = gff output

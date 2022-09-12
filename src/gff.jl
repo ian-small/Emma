@@ -53,7 +53,7 @@ function rRNA2GFF(rrn::rRNA, glength::Integer)
     return GFF("Emma", "rRNA", string(start), string(stop), string(evalue), rrn.stop[1].tstrand, ".", attributes)
 end
 
-function writeGFF(outfile::String, id::String, genome_length::Integer, cds_matches::Vector{HMMmatch},
+function writeGFF(outfile::String, id::AbstractString, genome_length::Integer, cds_matches::Vector{HMMmatch},
              trn_matches::Vector{CMAlignment_trn}, rRNAs::NamedTuple{(:rrnL, :rrnS), Tuple{rRNA, rRNA}})
 
     gffs = GFF[]

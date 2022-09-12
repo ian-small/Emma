@@ -30,7 +30,7 @@ function getcodons(seq::CircularSequence, pattern)
     return positions, codons
 end
 
-function getorfs!(writer::FASTA.Writer, id::String, genome::CircularSequence, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
+function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
     glength = length(genome)
     for (f, frame) in enumerate(stops)
         for (s, stop) in enumerate(frame)
@@ -49,7 +49,7 @@ function getorfs!(writer::FASTA.Writer, id::String, genome::CircularSequence, st
     end
 end
 
-function orfsearch(id::String, genome::CircularSequence, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
+function orfsearch(id::AbstractString, genome::CircularSequence, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
      rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
     writer = open(FASTA.Writer, "tmp.orfs.fa")
     getorfs!(writer, id, genome, '+', fstarts, fstops, minORF)
