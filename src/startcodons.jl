@@ -30,8 +30,8 @@ function readGFF(file::String, glength::Int32)
             fstart = parse(Int32, bits[4])
             fend = parse(Int32, bits[5])
             if strand == '-'
-                tmp = glength - fstart + 1
-                fstart = glength - fend + 1
+                tmp = reverse_complement(fstart)
+                fstart = reverse_complement(fend)
                 fend = tmp
             end
             attributes = split(bits[9], ";")

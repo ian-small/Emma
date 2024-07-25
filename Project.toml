@@ -1,8 +1,9 @@
 name = "Emma"
 uuid = "128bd364-da3e-11ec-1e16-23cb183f8c85"
-version = "0.1.0"
 authors = ["Ian Small <ian.small@uwa.edu.au>"]
+version = "1.0.0"
 
 [deps]
+ArtifactUtils = "8b73e784-e7d8-4ea5-973d-377fed4e3bce"
 BioSequences = "7e6ae17a-c86d-528c-b3b9-7f778a29fe59"
 FASTX = "c2308a5c-f048-11e8-3e8a-31650f418d12"
