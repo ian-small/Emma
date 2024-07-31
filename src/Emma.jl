@@ -1,3 +1,5 @@
+module Emma
+
 using Serialization
 using Artifacts
 using BioSequences
@@ -6,6 +8,7 @@ using Logging
 using Unicode
 using GenomicAnnotations
 using ArgMacros
+using UUIDs
 
 #const emmamodels = "/data/Emma/emma_vertebrate_models"
 const emmamodels = joinpath(artifact"Emma_vertebrate_models", "emma-models-1.0.0")
@@ -18,7 +21,6 @@ include("rRNAs.jl")
 include("gff.jl")
 include("gb.jl")
 include("visuals.jl")
-include("gb.jl")
 
 const minORF = 150
 
@@ -94,7 +96,7 @@ function trnF_start(GFFs, genome::CircularSequence, glength)
     end
 end
 
-function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgfile="", loglevel="Info")
+function main(infile::String; outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
 
     global_logger(ConsoleLogger(loglevel == "debug" ? Logging.Debug : Logging.Info))
 
@@ -110,12 +112,13 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
 
     #extend genome
     extended_genome = genome[1:glength+100]
-    writer = open(FASTA.Writer, "tmp.extended.fa")
+    uid = uuid1()
+    writer = open(FASTA.Writer, "$uid.extended.fa")
     write(writer, FASTA.Record(id, extended_genome))
     close(writer)
 
     #find tRNAs
-    trn_matches = parse_trn_alignments(cmsearch("trn", "all_trn.cm"), glength)
+    trn_matches = parse_trn_alignments(cmsearch(uid, "trn", "all_trn.cm"), glength)
     filter!(x -> x.fm.target_from <= glength, trn_matches)
     rationalise_trn_alignments(trn_matches)
     @debug trn_matches
@@ -129,7 +132,7 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
     for (cma, trunc_end) in overlapped
         trnseq = cma.fm.strand == '+' ? genome.sequence[cma.fm.target_from:trunc_end] : rev_genome.sequence[cma.fm.target_from:trunc_end]
         trnseq_polyA = trnseq * dna"AAAAAAAAAA"
-        polyA_matches = parse_trn_alignments(cmsearch(cma.fm.query, "trn", trnseq_polyA), 0)
+        polyA_matches = parse_trn_alignments(cmsearch(uid, cma.fm.query, "trn", trnseq_polyA), 0)
         isempty(polyA_matches) && continue
         trn_match = polyA_matches[1]
         if trn_match.fm.evalue < cma.fm.evalue
@@ -149,7 +152,7 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
 
     #find rRNAs
     #search for rrns using hmmsearch
-    rrns = parse_tbl(rrnsearch(), glength)
+    rrns = parse_tbl(rrnsearch(uid), glength)
     filter!(x -> x.evalue < 1e-10, rrns)
     @debug rrns
     #fix ends using flanking trn genes
@@ -172,7 +175,7 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
     rstops = codonmatches(rev_genome, stopcodon)
     add_stops_at_tRNAs!(rstops, rtRNAs, glength)
 
-    cds_matches = parse_domt(orfsearch(id, genome, fstarts, fstops, rstarts, rstops, minORF), glength)
+    cds_matches = parse_domt(orfsearch(uid, id, genome, fstarts, fstops, rstarts, rstops, minORF), glength)
     @debug cds_matches
     #fix start & stop codons
     fhmms = filter(x->x.strand == '+', cds_matches)
@@ -190,8 +193,6 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
             write(w, FASTA.Record(id, LongDNA{4}(shifted_genome[1:glength])))
         end
     end
-    CDSless = filter(x->x.ftype != "CDS", gffs)
-    mRNAless = filter(x->x.ftype != "mRNA", CDSless)
     if ~isnothing(outfile_gff)
         writeGFF(id, gffs, outfile_gff, glength)
     else 
@@ -203,13 +204,17 @@ function main(infile::String; outfile_gff="", outfile_gb="", outfile_fa="", svgf
         writeGB(id, gffs, outfile_gb, glength)
     end
 
-    svgfile = "test.svg"
-    drawgenome(svgfile, id, glength, mRNAless)
+    if ~isnothing(outfile_svg)
+        CDSless = filter(x->x.ftype != "CDS", gffs)
+        mRNAless = filter(x->x.ftype != "mRNA", CDSless)
+        drawgenome(outfile_svg, id, glength, mRNAless)
+    end
+
+    ##cleanup
+    for tmpfile in filter(x -> startswith(x, string(uid)), readdir(pwd()))
+        rm(tmpfile)
+    end
 end
-
-
-
-
 
 args = @dictarguments begin
     @helpusage "Emma.jl [options] <FASTA_file>"
@@ -224,6 +229,8 @@ args = @dictarguments begin
     @arghelp "file/dir for gb output"
     @argumentoptional String FA_out "--fa"
     @arghelp "file/dir for fasta output. Use this argument if you wish annotations to begin with tRNA-Phe"
+    @argumentoptional String SVG_out "--svg"
+    @arghelp "file/dir for svg output"
     @positionalrequired String FASTA_file
     @arghelp "file/dir for fasta input"
 end
@@ -238,16 +245,13 @@ if all_dirs
         outfile_gff = haskey(filtered_args, :GFF_out) ? joinpath(args[:GFF_out], accession * ".gff") : nothing
         outfile_gb = haskey(filtered_args, :GB_out) ? joinpath(args[:GB_out], accession * ".gb") : nothing
         outfile_fa = haskey(filtered_args, :FA_out) ? joinpath(args[:FA_out], accession * ".fa") : nothing
-        main(fasta, outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa)
+        outfile_svg = haskey(filtered_args, :SVG_out) ? joinpath(args[:SVG_out], accession * ".svg") : nothing
+        main(fasta; outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa, outfile_svg=outfile_svg)
     end
 elseif all_files
-    main(args[:FASTA_file], outfile_gff = args[:GFF_out], outfile_gb = args[:GB_out], outfile_fa = args[:FA_out])
+    main(args[:FASTA_file]; outfile_gff = args[:GFF_out], outfile_gb = args[:GB_out], outfile_fa = args[:FA_out], outfile_svg = args[:SVG_out])
 else
     throw("Inputs must be consistant; all directories or all files")
 end
 
-
-
-#ARGS[1] = fasta input
-#ARGS[2] = gff output
-#ARGS[3] = svg output
+end

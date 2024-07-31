@@ -52,17 +52,17 @@ function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequ
     end
 end
 
-function orfsearch(id::AbstractString, genome::CircularSequence, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
+function orfsearch(uid::UUID, id::AbstractString, genome::CircularSequence, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
-    writer = open(FASTA.Writer, "tmp.orfs.fa")
+    writer = open(FASTA.Writer, "$uid.orfs.fa")
     getorfs!(writer, id, genome, '+', fstarts, fstops, minORF)
     getorfs!(writer, id, reverse_complement(genome), '-', rstarts, rstops, minORF)
     close(writer)
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
-    cmd = `hmmsearch --domtblout tmp.domt $hmmpath tmp.orfs.fa`
-    outfile = "tmp.hmmsearch.out"
+    cmd = `hmmsearch --domtblout $uid.domt $hmmpath $uid.orfs.fa`
+    outfile = "$uid.hmmsearch.out"
     run(pipeline(cmd, stdout=outfile))
-    return "tmp.domt"
+    return "$uid.domt"
 end
 
 struct HMMmatch
