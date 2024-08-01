@@ -4,7 +4,7 @@ module EmmaCommand
 using ArgMacros, Emma
 
 args = @dictarguments begin
-    @helpusage "Emma.jl [options] <FASTA_file>"
+    @helpusage "Emma/src/command.jl [options] <FASTA_file>"
     @helpdescription """
         Note: Use consistant inputs/outputs. If you wish
         to annotate a directory of fasta files, ensure that
