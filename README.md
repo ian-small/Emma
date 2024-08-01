@@ -19,36 +19,38 @@ Tell Julia to treat the repo as a Julia package:
 `dev '~/github/Emma'`
 
 (replace ~/github with whatever path you've cloned the Emma repo to)
+
 This will install all the Julia packages that Emma needs, and the models it needs to annotate mitochondrial genomes.
+
 You can now quit the Julia REPL with Ctrl-D
 
 ## Running EMMA
-julia --project=~/github/Emma ~/github/Emma/src/command.jl --help                                                 
-Usage: Emma/src/command.jl [options] <FASTA_file>
+>julia --project=~/github/Emma ~/github/Emma/src/command.jl --help                                                 
+>Usage: Emma/src/command.jl [options] <FASTA_file>
 
-Note: Use consistant inputs/outputs. If you wish
-to annotate a directory of fasta files, ensure that
-the output parameters are also directories.
+>Note: Use consistant inputs/outputs. If you wish
+>to annotate a directory of fasta files, ensure that
+>the output parameters are also directories.
 
-Positional Arguments:
-FASTA_file
-      file/dir for fasta input
-      (Type: String, Required)
+>Positional Arguments:
+>FASTA_file
+>      file/dir for fasta input
+>      (Type: String, Required)
 
-Option Arguments:
---gff
-      file/dir for gff output
-      (Type: String)
---gb
-      file/dir for gb output
-      (Type: String)
---fa
-      file/dir for fasta output. Use this argument if you wish
-      annotations to begin with tRNA-Phe
-      (Type: String)
---svg
-      file/dir for svg output
-      (Type: String)
+>Option Arguments:
+>--gff
+>      file/dir for gff output
+>      (Type: String)
+>--gb
+>      file/dir for gb output
+>      (Type: String)
+>--fa
+>      file/dir for fasta output. Use this argument if you wish
+>      annotations to begin with tRNA-Phe
+>      (Type: String)
+>--svg
+>      file/dir for svg output
+>      (Type: String)
 
 
 
