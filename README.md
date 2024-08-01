@@ -7,11 +7,17 @@ EMMA is written in [Julia](https://julialang.org); follow the [download and inst
 
 ## Installation
 Clone this github repo:
+
 `git clone https://github.com/ian-small/Emma.git`
+
 Tell Julia to treat the repo as a Julia package:
+
 `julia`
+
 `]`
+
 `dev '~/github/Emma'`
+
 (replace ~/github with whatever path you've cloned the Emma repo to)
 This will install all the Julia packages that Emma needs, and the models it needs to annotate mitochondrial genomes.
 You can now quit the Julia REPL with Ctrl-D
