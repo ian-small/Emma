@@ -1,6 +1,6 @@
-#NCBI translation table 5, minus UUG start
-const startcodon = biore"(ATT)|(ATC)|(ATA)|(ATG)|(GTG)|(TTG)|(CTG)"d
-const stopcodon = biore"(TAG)|(TAA)|(AGA)|(AGG)"d
+#from corresponding NCBI translation tables
+const ncbi_start_codons = Dict(2 => biore"(ATT)|(ATC)|(ATA)|(ATG)|(GTG)|(TTG)|(CTG)"d, 5 => biore"(ATT)|(ATC)|(ATA)|(ATG)|(GTG)|(TTG)"d)
+const ncbi_stop_codons = Dict(2 => biore"(TAG)|(TAA)|(AGA)|(AGG)"d, 5 => biore"(TAG)|(TAA)"d)
 
 const START_CODON_PENALTY_WEIGHTING = 30.0
 const INTRUSION_PENALTY_WEIGHTING = 100.0
@@ -9,6 +9,10 @@ const SCANNING_DISTANCE_THRESHOLD = 30
 const SCANNING_PENALTY_WEIGHTING = 50.0
 
 Codon = LongSubSeq{DNAAlphabet{4}}
+
+#HGNC-approved symbols https://www.genenames.org/data/genegroup/#!/group/1974
+const cds2symbol = Dict("ATP6" => "MT-ATP6", "ATP8" => "MT-ATP8", "COX1" => "MT-CO1", "COX2" => "MT-CO2", "COX3" => "MT-CO3", "CYTB" => "MT-CYTB",
+    "ND1" => "MT-ND1", "ND2" => "MT-ND2", "ND3" => "MT-ND3", "ND4" => "MT-ND4", "ND4L" => "MT-ND4L", "ND5" => "MT-ND5", "ND6" => "MT-ND6")
 
 function codonmatches(seq::CircularSequence, pattern)::Vector{Vector{Int32}}
     frames = [Int32[] for f in 1:3]
@@ -32,7 +36,7 @@ function getcodons(seq::CircularSequence, pattern)
     return positions, codons
 end
 
-function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
+function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int16, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
     glength = length(genome)
     for (f, frame) in enumerate(starts)
         nextstop = 0
@@ -45,18 +49,18 @@ function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequ
             end
             circulardistance(start, nextstop, glength) < minORF && continue
             if nextstop < start; nextstop += glength; end
-            translation = BioSequences.translate(genome.sequence[start:(nextstop-1)], code = ncbi_trans_table[2])
+            translation = BioSequences.translate(genome.sequence[start:(nextstop-1)], code = ncbi_trans_table[translation_table])
             translation[1] = AA_M
             write(writer, FASTA.Record(id * "*" * strand * "*" * string(start) * "-" * string(nextstop), translation))
         end
     end
 end
 
-function orfsearch(uid::UUID, id::AbstractString, genome::CircularSequence, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
+function orfsearch(uid::UUID, id::AbstractString, genome::CircularSequence, translation_table::Int16, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
     writer = open(FASTA.Writer, "$uid.orfs.fa")
-    getorfs!(writer, id, genome, '+', fstarts, fstops, minORF)
-    getorfs!(writer, id, reverse_complement(genome), '-', rstarts, rstops, minORF)
+    getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
+    getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
     close(writer)
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     cmd = `hmmsearch --domtblout $uid.domt $hmmpath $uid.orfs.fa`

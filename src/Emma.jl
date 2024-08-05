@@ -70,17 +70,17 @@ function remove_duplicate_features(matches::Vector)
     return features
 end
 
-function trnF_start(GFFs, genome::CircularSequence, glength)
-    trnF_idx = findfirst(x -> occursin("trnF", x.attributes), GFFs)
-    if trnF_idx ≠ nothing
-        trnF = GFFs[trnF_idx]
-        if trnF.strand == '-'
+function rotate(rotate_to::String, GFFs, genome::CircularSequence, glength)
+    feature_idx = findfirst(x -> occursin(rotate_to, x.attributes), GFFs)
+    if feature_idx ≠ nothing
+        first_feature = GFFs[feature_idx]
+        if first_feature.strand == '-'
             genome = reverse_complement(genome)
             for gff in GFFs
                 reverse_complement!(gff, glength)
             end
         end
-        offset = parse(Int32, trnF.fstart) - 1
+        offset = parse(Int32, first_feature.fstart) - 1
         for gff in GFFs
             relocate!(gff, offset, glength)
         end
@@ -92,12 +92,12 @@ function trnF_start(GFFs, genome::CircularSequence, glength)
         genome = CircularSequence(append!(firstchunk, secondchunk))
         return GFFs, genome
     else
-        @warn "Positional translation not possible due to missing trnF"
+        @warn "Positional translation not possible due to missing feature: $rotate_to"
         return GFFs, genome
     end
 end
 
-function emma(infile::String; outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
+function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
 
     global_logger(ConsoleLogger(loglevel == "debug" ? Logging.Debug : Logging.Info))
 
@@ -165,6 +165,8 @@ function emma(infile::String; outfile_gff=nothing, outfile_gb=nothing, outfile_f
     @debug rrns
 
     #find CDSs
+    startcodon = ncbi_start_codons[translation_table]
+    stopcodon = ncbi_stop_codons[translation_table]
     fstarts, fstartcodons = getcodons(genome, startcodon)
     remove_starts_in_tRNAs!(fstarts, fstartcodons, ftRNAs, glength)
     fstops = codonmatches(genome, stopcodon)
@@ -176,7 +178,7 @@ function emma(infile::String; outfile_gff=nothing, outfile_gb=nothing, outfile_f
     rstops = codonmatches(rev_genome, stopcodon)
     add_stops_at_tRNAs!(rstops, rtRNAs, glength)
 
-    cds_matches = parse_domt(orfsearch(uid, id, genome, fstarts, fstops, rstarts, rstops, minORF), glength)
+    cds_matches = parse_domt(orfsearch(uid, id, genome, translation_table, fstarts, fstops, rstarts, rstops, minORF), glength)
     @debug cds_matches
     #fix start & stop codons
     fhmms = filter(x->x.strand == '+', cds_matches)
@@ -187,28 +189,28 @@ function emma(infile::String; outfile_gff=nothing, outfile_gb=nothing, outfile_f
     cds_matches = append!(fhmms,rhmms)
     frameshift_merge!(cds_matches, glength, genome)
     @info "found $(length(cds_matches)) protein-coding genes"
-    gffs = getGFF(genome, rev_genome, cds_matches, trn_matches, rrns, glength)
+    gffs = getGFF(uid, genome, rev_genome, cds_matches, trn_matches, rrns, glength)
+
+    if ~isnothing(rotate_to)
+        gffs, genome = rotate(rotate_to, gffs, genome, glength)
+    end
+
     if ~isnothing(outfile_fa)
-        gffs, shifted_genome = trnF_start(gffs, genome, glength)
         open(FASTA.Writer, outfile_fa) do w
-            write(w, FASTA.Record(id, LongDNA{4}(shifted_genome[1:glength])))
+            write(w, FASTA.Record(id, LongDNA{4}(genome[1:glength])))
         end
     end
+
     if ~isnothing(outfile_gff)
         writeGFF(id, gffs, outfile_gff, glength)
-    else 
-        #= for gff in gffs
-            println(join([id, gff.source, gff.ftype,gff.fstart,gff.fend,gff.score,gff.strand,gff.phase,gff.attributes], "\t"))
-        end =#
     end
+
     if ~isnothing(outfile_gb)
         writeGB(id, gffs, outfile_gb, glength)
     end
 
     if ~isnothing(outfile_svg)
-        CDSless = filter(x->x.ftype != "CDS", gffs)
-        mRNAless = filter(x->x.ftype != "mRNA", CDSless)
-        drawgenome(outfile_svg, id, glength, mRNAless)
+        drawgenome(outfile_svg, id, glength, gffs)
     end
 
     ##cleanup

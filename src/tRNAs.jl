@@ -9,6 +9,12 @@ const anticodon2trn = Dict("UGC"=>"trnA","GCA"=>"trnC","GUC"=>"trnD","UUC"=>"trn
     "UGG"=>"trnP","UUG"=>"trnQ","UCG"=>"trnR","GCU"=>"trnS1","UGA"=>"trnS2","UGU"=>"trnT","UAC"=>"trnV",
     "UCA"=>"trnW","GUA"=>"trnY")
 
+#HGNC-approved symbols https://www.genenames.org/data/genegroup/#!/group/843
+const trn2symbol = Dict("trnA"=>"MT-TA","trnC"=>"MT-TC","trnD"=>"MT-TD","trnE"=>"MT-TE","trnF"=>"MT-TF","trnG"=>"MT-TG",
+"trnH"=>"MT-TH","trnI"=>"MT-TI","trnK"=>"MT-TK","trnL2"=>"MT-TL2","trnL1"=>"MT-TL1","trnM"=>"MT-TM","trnN"=>"MT-TN",
+"trnP"=>"MT-TP","trnQ"=>"MT-TQ","trnR"=>"MT-TR","trnS1"=>"MT-TS1","trnS2"=>"MT-TS2","trnT"=>"MT-TT","trnV"=>"MT-TV",
+"trnW"=>"MT-TW","trnY"=>"MT-TY")
+
 #generic vertebrate models
 #= const model2trn = Dict("A.seed25-1"=>"trnA","C.seed25-1"=>"trnC","D.seed25-1"=>"trnD","E.seed25-1"=>"trnE",
     "F.seed25-1"=>"trnF","G.seed25-1"=>"trnG","H.seed25-1"=>"trnH","I.seed25-1"=>"trnI","K.seed25-1"=>"trnK",

@@ -7,6 +7,15 @@ const cdscolour = "gold"
 const trncolour = "blue"
 const rrncolour = "red"
 
+function get_attributes(feature::GFF)
+    attributes = Dict{String, String}()
+    for attribute in split(feature.attributes, ";")
+        bits = split(attribute, "=")
+        attributes[first(bits)] = last(bits)
+    end
+    attributes
+end
+
 function drawfeature(feature::GFF, glength::Integer)
 
     pos2radians(position) = 2π*position/glength
@@ -45,22 +54,15 @@ function drawfeature(feature::GFF, glength::Integer)
         setcolor(rrncolour)
     end
     fillpath()
-    name = first(split(feature.attributes, ";"))[6:end]
-    prot_name = first(split(name, "."))
+
+    attributes = get_attributes(feature)
+    name = attributes["Name"]
     fontsize(6)
     setcolor("black")
 
-#    textcurvecentred(name, pos2radians((start+stop)/2), fradius, gcentre; baselineshift=-2)
     location=pos2radians((start+stop)/2)
-#   place protine and rna names are right angles to circle
-#   draw a line connecting them
-    if (prot_name == "rrnS")
-        (prot_name="12S rRNA")
-    end
-    if (prot_name == "rrnL")
-        (prot_name="16S rRNA")
-    end
-    Luxor.text(prot_name, Point((fradius+20)*cos(location), (fradius+20)sin(location)), angle=location)
+
+    Luxor.text(name, Point((fradius+20)*cos(location), (fradius+20)sin(location)), angle=location)
     Luxor.line(Point((fradius+5)*cos(location), (fradius+5)*sin(location)), Point((fradius+18)*cos(location), (fradius+18)sin(location)), :stroke)
 end
 
@@ -78,6 +80,7 @@ function drawgenome(svgfile::String, id::AbstractString, glength::Integer, gffs:
     Luxor.text("Annotated by Emma", Point(0, 20), halign=:center, valign=:center)
     fontface("Helvetica Oblique")
     for gff in gffs
+        gff.ftype ∉ ["CDS", "rRNA", "tRNA"] && continue
         drawfeature(gff, glength)
     end
 

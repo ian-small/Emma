@@ -18,7 +18,7 @@ function writeGB(id::AbstractString, gffs::Vector{GFF}, outfile_gb::String, glen
         write(out, ">Feature $id\n")
         gffs = group_features(gffs) #Ensures that features of common locus are written together
         for (name, vector) in gffs
-            sort!(vector, lt = feature_compare) #Ensures correct heirarchy in file
+            sort!(vector, lt = feature_compare) #Ensures correct hierarchy in file
             for gff in vector
                 gff.strand == '+' ? fstart = gff.fstart : fstart = gff.fend
                 gff.strand == '+' ? fend = gff.fend : fend = gff.fstart

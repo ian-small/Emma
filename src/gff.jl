@@ -23,8 +23,7 @@ end
 
 function CDS2GFF(cds::FeatureMatch, genome::CircularSequence, rev_genome::CircularSequence, trns::Vector{tRNA})
     glength = length(genome)
-    name = first(split(cds.query, '.'))
-    attributes = "Name=" * name * ";ID=$name.CDS"
+    attributes = ""
     cdsstart = cds.target_from
     cdsstop = cds.target_from + cds.target_length - 1 + 3
     startcodon = cds.strand == '+' ? genome[cdsstart:cdsstart+2] : rev_genome[cdsstop-2:cdsstop]
@@ -44,9 +43,9 @@ function CDS2GFF(cds::FeatureMatch, genome::CircularSequence, rev_genome::Circul
     return GFF("Emma", "CDS", string(gffstart), string(gffend), string(cds.evalue), cds.strand, "0", attributes)
 end
 
-function tRNA2GFF(trn::tRNA, glength::Integer; count="")
+function tRNA2GFF(trn::tRNA, glength::Integer)
     gffstart, gffend = FMcoords2GFF(trn.fm, glength)
-    attributes = "Name=" * trn.fm.query * "-" * trn.anticodon * ";ID=$(trn.fm.query)" * count
+    attributes = ""
     if trn.polyA > 0
         attributes *= ";Note=tRNA completed by post-transcriptional addition of " * string(trn.polyA)
         attributes *= trn.polyA > 1 ? " As" : " A"
@@ -56,7 +55,7 @@ function tRNA2GFF(trn::tRNA, glength::Integer; count="")
         @warn "trnD $(trn.anticodon) edited to GUC by RNA editing"
     elseif !haskey(anticodon2trn, trn.anticodon)
         attributes *= ";Note=tRNA has no valid anticodon"
-        @warn "no valid anticodon found for $(trn.fm.query)"
+        @warn "no valid anticodon found for $(name)"
     end
     if typeof(attributes) != Missing
         return GFF("Emma", "tRNA", string(gffstart), string(gffend), string(trn.fm.evalue), trn.fm.strand, ".", attributes)
@@ -67,16 +66,15 @@ end
 
 function rRNA2GFF(rrn::FeatureMatch, glength::Integer)
     gffstart, gffend = FMcoords2GFF(rrn, glength)
-    attributes = "Name=" * rrn.query * ";ID=$(rrn.query)"
-    return GFF("Emma", "rRNA", string(gffstart), string(gffend), string(rrn.evalue), rrn.strand, ".", attributes)
+    return GFF("Emma", "rRNA", string(gffstart), string(gffend), string(rrn.evalue), rrn.strand, ".", "")
 end
 
-function add_geneGFFs(gffs::Vector{GFF}, genome::CircularSequence, glength::Integer)
+#= function add_geneGFFs(gffs::Vector{GFF}, genome::CircularSequence, glength::Integer)
+    #Adds gene features, that are essentially identical to CDS features
     cdsGFFs = filter(x->x.ftype == "CDS", gffs)
     for gff in cdsGFFs
-        name = match(r"Name=(\w+)", gff.attributes).captures[1]
-        #Adds gene features, that are essentially identical to CDS
-        if name == "ND3"
+        name = cds2symbol[match(r"Name=(\w+)", gff.attributes).captures[1]]
+        if name == "MT-ND3"
             group = filter(x -> x != gff && x in gffs && (x.fstart == gff.fstart || x.fend == gff.fend), cdsGFFs)
             if length(group) == 2
                 deleteat!(gffs, findfirst(x->x==gff,gffs))
@@ -95,59 +93,62 @@ function add_geneGFFs(gffs::Vector{GFF}, genome::CircularSequence, glength::Inte
         end
     end
     return gffs
-end
+end =#
 
-function getGFF(genome::CircularSequence, rev_genome::CircularSequence, cds_matches::Vector{FeatureMatch},
+function getGFF(uid::UUID, genome::CircularSequence, rev_genome::CircularSequence, cds_matches::Vector{FeatureMatch},
              trn_matches::Vector{tRNA}, rRNAs::Vector{FeatureMatch}, glength::Integer)
 
     gffs = GFF[]
-    genome_length = length(genome)
-
-    grouped_trns = Dict{String, Vector{tRNA}}()
-    for trn in trn_matches
-        if haskey(grouped_trns, trn.fm.query)
-            push!(grouped_trns[trn.fm.query], trn)
-        else
-            grouped_trns[trn.fm.query] = [trn]
-        end
-    end
+    genome_length = length(genome)    
 
     function writeone(gff::Union{Nothing, GFF})
-        if typeof(gff) != Nothing
+        if ~isnothing(gff)
             push!(gffs, gff)
         end
     end
 
+    for trn in trn_matches
+        #gene
+        name = trn2symbol[trn.fm.query]
+        gene_id = uuid5(uid, name)
+        #tRNA
+        gff = tRNA2GFF(trn, genome_length)
+        writeone(GFF("Emma", "gene", gff.fstart, gff.fend, ".", trn.fm.strand, ".", "ID=$gene_id;Name=$name"))
+        trn_id = uuid5(gene_id, name)
+        gff = tRNA2GFF(trn, glength)
+        gff.attributes = "ID=$trn_id;Parent=$gene_id;Name=$name" * gff.attributes
+        writeone(gff)
+    end
+
     for cds in cds_matches
+        #gene
+        name = cds2symbol[first(split(cds.query, '.'))]
+        gene_id = uuid5(uid, name)
+        #mRNA
+        mrna_id = uuid5(gene_id, name)
+        #CDS
         gff = CDS2GFF(cds, genome, rev_genome, trn_matches)
+        writeone(GFF("Emma", "gene", gff.fstart, gff.fend, ".", cds.strand, ".", "ID=$gene_id;Name=$name"))
+        writeone(GFF("Emma", "mRNA", gff.fstart, gff.fend, ".", cds.strand, ".", "ID=$mrna_id;Parent=$gene_id;Name=$name"))
+        cds_id = uuid5(mrna_id, name)
+        gff = CDS2GFF(cds, genome, rev_genome, trn_matches)
+        gff.attributes = "ID=$cds_id;Parent=$mrna_id;Name=$name" * gff.attributes
         writeone(gff)
     end
-    for (id, trns) in grouped_trns
-        if length(trns) > 1
-            for (i, trn) in enumerate(trns)
-                gff = tRNA2GFF(trn, genome_length, count=".$i")
-                writeone(gff)
-            end
-        else
-            gff = tRNA2GFF(trns[1], genome_length)
-            writeone(gff)
-        end
-    end
+
     for rrn in rRNAs
+        #gene
+        name = rrn2symbol[rrn.id]
+        gene_id = uuid5(uid, name)
         gff = rRNA2GFF(rrn, genome_length)
+        writeone(GFF("Emma", "gene", gff.fstart, gff.fend, ".", rrn.strand, ".", "ID=$gene_id;Name=$name"))
+        rrn_id = uuid5(gene_id, name)
+        gff = rRNA2GFF(rrn, glength)
+        gff.attributes = "ID=$rrn_id;Parent=$gene_id;Name=$name" * gff.attributes
         writeone(gff)
     end
-    gffs = add_geneGFFs(gffs, genome, glength)
-    fcds = filter(x->x.strand == '+', cds_matches)
-    filter!(gene -> !any(is_encompassed(other_gene, gene) for other_gene in fcds if gene != other_gene), fcds)
-    ftrns = filter(x->x.fm.strand == '+', trn_matches)
-    fmRNAs = add_mRNAGFFs(fcds, ftrns, glength)
-    rcds = filter(x->x.strand == '-', cds_matches)
-    filter!(gene -> !any(is_encompassed(other_gene, gene) for other_gene in rcds if gene != other_gene), rcds)
-    rtrns = filter(x->x.fm.strand == '-', trn_matches)
-    rmRNAs = add_mRNAGFFs(rcds, rtrns, glength)
-    append!(gffs, fmRNAs, rmRNAs)
-    return gffs
+    
+    return sort!(gffs; by = x ->x.fstart)
 end
 
 function writeGFF(id::AbstractString, gffs::Vector{GFF}, outfile::String, glength::Integer)
@@ -162,15 +163,14 @@ function writeGFF(id::AbstractString, gffs::Vector{GFF}, outfile::String, glengt
     end
 end
 
-
-function is_encompassed(outer_gene, inner_gene)
+#= function is_encompassed(outer_gene, inner_gene)
     return outer_gene.target_from <= inner_gene.target_from && (outer_gene.target_from+outer_gene.target_length) >= (inner_gene.target_from+inner_gene.target_length)
 end
 
 function add_mRNAGFFs(cds_matches::Vector{FeatureMatch}, trns::Vector{tRNA}, glength::Integer)
     mRNAs = GFF[]
     for (i,cds_match) in enumerate(cds_matches)
-        name = first(split(cds_match.query, '.'))
+        name = cds2symbol[first(split(cds_match.query, '.'))]
         attributes = "Name=" * name * ";ID=$name.mRNA"
         cdsstart = cds_match.target_from
         cdsstop = cdsstart + cds_match.target_length - 1 + 3
@@ -197,7 +197,7 @@ function add_mRNAGFFs(cds_matches::Vector{FeatureMatch}, trns::Vector{tRNA}, gle
         push!(mRNAs, GFF("Emma", "mRNA", string(gffstart), string(gffend), string(cds_match.evalue), cds_match.strand, "0", attributes))
     end
     return mRNAs      
-end
+end =#
 
 reverse_strand = Dict('+' => '-', '-' => '+', '.' => '.')
 

@@ -32,11 +32,15 @@ Usage: Emma/src/command.jl [options] <FASTA file or directory>
 
 Optional Arguments:
 
+--transl_table NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates
+
+--rotate rotate genome and annotations to start with this feature
+
+--fa file/dir for .fasta output
+
 --gff file/dir for .gff output
             
 --tbl file/dir for .tbl output (for GenBank submissions)
-      
---fa file/dir for .fasta output; use this argument if you wish to rotate the genome to begin with tRNA-Phe
             
 --svg file/dir for .svg output
       
@@ -47,6 +51,10 @@ Note: Use consistant inputs/outputs. If you wish to annotate a directory of fast
 To annotate a single genome in .gff format:
 
 `julia --project=~/github/Emma ~/github/Emma/src/command.jl --gff my_genome.gff my_genome.fasta`
+
+To rotate a single genome to start with MT-TM and save the rotated sequence in .fa format and the annotations in .gff format:
+
+`julia --project=~/github/Emma ~/github/Emma/src/command.jl --rotate MT-TM --fa my_genome.rotated.fasta --gff my_genome.rotated.gff my_genome.fasta`
 
 To annotate many fasta files in the directory 'my_genomes' and save the generated .tbl files in the same directory:
 
