@@ -26,9 +26,10 @@ args = @dictarguments begin
     @arghelp "file/dir for fasta input"
 end
 println(ARGS)
-filtered_args = filter(pair -> ~isnothing(pair.second), args)
-all_dirs = all(isdir, values(filtered_args))
-all_files = !any(isdir, values(filtered_args))
+file_args = [args[:FA_out], args[:GFF_out], args[:GB_out], args[:SVG_out], args[:FASTA_file]]
+filtered_args = filter(x -> ~isnothing(x), file_args)
+all_dirs = all(isdir, filtered_args)
+all_files = !any(isdir, filtered_args)
 if all_dirs
     fafiles = filter!(x->endswith(x,".fa") || endswith(x,".fasta"), readdir(args[:FASTA_file], join=true))
     for fasta in fafiles
