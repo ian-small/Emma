@@ -7,15 +7,6 @@ const cdscolour = "gold"
 const trncolour = "blue"
 const rrncolour = "red"
 
-function get_attributes(feature::GFF)
-    attributes = Dict{String, String}()
-    for attribute in split(feature.attributes, ";")
-        bits = split(attribute, "=")
-        attributes[first(bits)] = last(bits)
-    end
-    attributes
-end
-
 function drawfeature(feature::GFF, glength::Integer)
 
     pos2radians(position) = 2π*position/glength

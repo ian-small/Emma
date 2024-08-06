@@ -9,6 +9,20 @@ mutable struct GFF
     attributes::String
 end
 
+function get_attributes(feature::GFF)
+    attributes = Dict{String, String}()
+    for attribute in split(feature.attributes, ";")
+        bits = split(attribute, "=")
+        key = first(bits)
+        count = 1
+        while haskey(attributes, key)
+            key *= string(count)
+            count += 1
+        end
+        attributes[key] = last(bits)
+    end
+    attributes
+end
 
 function FMcoords2GFF(strand::Char, start::Integer, length::Integer, glength::Integer)
     gffstart = strand == '+' ? start : mod1(reverse_complement(start + length - 1, glength), glength)
@@ -23,7 +37,7 @@ end
 
 function CDS2GFF(cds::FeatureMatch, genome::CircularSequence, rev_genome::CircularSequence, trns::Vector{tRNA})
     glength = length(genome)
-    attributes = ""
+    attributes = ";Product=" * cds2product[first(split(cds.query, '.'))]
     cdsstart = cds.target_from
     cdsstop = cds.target_from + cds.target_length - 1 + 3
     startcodon = cds.strand == '+' ? genome[cdsstart:cdsstart+2] : rev_genome[cdsstop-2:cdsstop]
@@ -45,7 +59,7 @@ end
 
 function tRNA2GFF(trn::tRNA, glength::Integer)
     gffstart, gffend = FMcoords2GFF(trn.fm, glength)
-    attributes = ""
+    attributes = ";Product=" * trn2product[trn.fm.query] * "($(trn.anticodon))"
     if trn.polyA > 0
         attributes *= ";Note=tRNA completed by post-transcriptional addition of " * string(trn.polyA)
         attributes *= trn.polyA > 1 ? " As" : " A"
@@ -66,7 +80,8 @@ end
 
 function rRNA2GFF(rrn::FeatureMatch, glength::Integer)
     gffstart, gffend = FMcoords2GFF(rrn, glength)
-    return GFF("Emma", "rRNA", string(gffstart), string(gffend), string(rrn.evalue), rrn.strand, ".", "")
+    attributes = ";Product=" * rrn2product[rrn.query]
+    return GFF("Emma", "rRNA", string(gffstart), string(gffend), string(rrn.evalue), rrn.strand, ".", attributes)
 end
 
 #= function add_geneGFFs(gffs::Vector{GFF}, genome::CircularSequence, glength::Integer)

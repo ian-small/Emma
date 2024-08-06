@@ -15,6 +15,11 @@ const trn2symbol = Dict("trnA"=>"MT-TA","trnC"=>"MT-TC","trnD"=>"MT-TD","trnE"=>
 "trnP"=>"MT-TP","trnQ"=>"MT-TQ","trnR"=>"MT-TR","trnS1"=>"MT-TS1","trnS2"=>"MT-TS2","trnT"=>"MT-TT","trnV"=>"MT-TV",
 "trnW"=>"MT-TW","trnY"=>"MT-TY")
 
+const trn2product = Dict("trnA"=>"tRNA-Ala","trnC"=>"tRNA-Cys","trnD"=>"tRNA-Asp","trnE"=>"tRNA-Glu","trnF"=>"tRNA-Phe","trnG"=>"tRNA-Gly",
+"trnH"=>"tRNA-His","trnI"=>"tRNA-Ile","trnK"=>"tRNA-Lys","trnL2"=>"tRNA-Leu","trnL1"=>"tRNA-Leu","trnM"=>"tRNA-Met","trnN"=>"tRNA-Asn",
+"trnP"=>"tRNA-Pro","trnQ"=>"tRNA-Gln","trnR"=>"tRNA-Arg","trnS1"=>"tRNA-Ser","trnS2"=>"tRNA-Ser","trnT"=>"tRNA-Thr","trnV"=>"tRNA-Val",
+"trnW"=>"tRNA-Trp","trnY"=>"tRNA-Tyr")
+
 #generic vertebrate models
 #= const model2trn = Dict("A.seed25-1"=>"trnA","C.seed25-1"=>"trnC","D.seed25-1"=>"trnD","E.seed25-1"=>"trnE",
     "F.seed25-1"=>"trnF","G.seed25-1"=>"trnG","H.seed25-1"=>"trnH","I.seed25-1"=>"trnI","K.seed25-1"=>"trnK",

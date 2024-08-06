@@ -14,6 +14,14 @@ Codon = LongSubSeq{DNAAlphabet{4}}
 const cds2symbol = Dict("ATP6" => "MT-ATP6", "ATP8" => "MT-ATP8", "COX1" => "MT-CO1", "COX2" => "MT-CO2", "COX3" => "MT-CO3", "CYTB" => "MT-CYTB",
     "ND1" => "MT-ND1", "ND2" => "MT-ND2", "ND3" => "MT-ND3", "ND4" => "MT-ND4", "ND4L" => "MT-ND4L", "ND5" => "MT-ND5", "ND6" => "MT-ND6")
 
+const cds2product = Dict("ND1"=>"NADH dehydrogenase subunit 1","nad1"=>"NADH dehydrogenase subunit 1","ND2"=>"NADH dehydrogenase subunit 2","nad2"=>"NADH dehydrogenase subunit 2",
+"ND3"=>"NADH dehydrogenase subunit 3","nad3"=>"NADH dehydrogenase subunit 3","ND4"=>"NADH dehydrogenase subunit 4","nad4"=>"NADH dehydrogenase subunit 4","ND4L"=>"NADH dehydrogenase subunit 4L",
+"nad4L"=>"NADH dehydrogenase subunit 4L","ND5"=>"NADH dehydrogenase subunit 5","nad5"=>"NADH dehydrogenase subunit 5","ND6"=>"NADH dehydrogenase subunit 6","nad6"=>"NADH dehydrogenase subunit 6",
+"COX1"=>"cytochrome c oxidase subunit I","cox1"=>"cytochrome c oxidase subunit I","COX2"=>"cytochrome c oxidase subunit II","cox2"=>"cytochrome c oxidase subunit II",
+"COX3"=>"cytochrome c oxidase subunit III","cox3"=>"cytochrome c oxidase subunit III","ATP6"=>"ATP synthase F0 subunit 6","atp6"=>"ATP synthase F0 subunit 6","ATP8"=>"ATP synthase F0 subunit 8",
+"atp8"=>"ATP synthase F0 subunit 8","CYTB"=>"cytochrome b","cob"=>"cytochrome b")
+
+
 function codonmatches(seq::CircularSequence, pattern)::Vector{Vector{Int32}}
     frames = [Int32[] for f in 1:3]
     for m in eachmatch(pattern, seq.sequence[1:seq.length+2])

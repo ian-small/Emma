@@ -206,7 +206,7 @@ function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gf
     end
 
     if ~isnothing(outfile_gb)
-        writeGB(id, gffs, outfile_gb, glength)
+        writeGB(uid, id, translation_table, gffs, outfile_gb, glength)
     end
 
     if ~isnothing(outfile_svg)

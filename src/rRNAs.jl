@@ -2,6 +2,8 @@ const model2rrn = Dict("16srna"=>"rrnL","12srna"=>"rrnS")
 
 const rrn2symbol = Dict("rrnS"=>"MT-RNR1", "rrnL"=>"MT-RNR2")
 
+const rrn2product= Dict("12srna"=>"12S rRNA","rrn12"=>"12S rRNA","16srna"=>"16S rRNA","rrn16"=>"16S rRNA")
+
 function rrnsearch(uid::UUID)
     hmmpath = joinpath(emmamodels, "rrn", "all_rrn.hmm")
     cmd = `nhmmer --tblout $uid.tbl $hmmpath $uid.extended.fa`
