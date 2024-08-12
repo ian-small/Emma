@@ -56,11 +56,12 @@ function get_args()
     args = @dictarguments begin
         @helpusage "Emma/src/command.jl [options] <FASTA_file>"
         @helpdescription """
-            Note: Use consistant inputs/outputs. If you wish
-            to annotate a directory of fasta files, ensure that
-            the output parameters are also directories.
+            If there is more than one fasta file to annotate
+            then if the options (--gff etc.) are *not* directories
+            they will be used as suffixes for the output filenames and
+            they will be put alongside the input fasta files.
             """
-        @argumentdefault Int16 2 translation_table "--transl_table"
+        @argumentdefault Int16 2 translation_table "--transl-table"
         @arghelp "NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates"
         @argumentoptional String rotate_to "--rotate"
         @arghelp "rotate genome and annotations to start with this feature"
@@ -75,6 +76,7 @@ function get_args()
         @argumentdefault String "info" loglevel "--loglevel"
         @arghelp "loglevel (info,warn,error,debug)"
         @argumentdefault String "." tempdir "--tempdir"
+        @arghelp "directory to write temporary files into"
         # @positionalrequired String FASTA_file
         @positionalleftover String FASTA_files "fastafiles"
         @arghelp "files/directories for fasta input"
