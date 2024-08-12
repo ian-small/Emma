@@ -71,11 +71,41 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence, glength)
         return GFFs, genome
     end
 end
+MayBeString = Union{Nothing,String}
 
-function emma(tempfile::TempFile, infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
+function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
+    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing,
+    outfile_svg::MayBeString=nothing)
 
-    global_logger(ConsoleLogger(loglevel == "debug" ? Logging.Debug : Logging.Info))
+    id, gffs, genome = emmaone(tempfile, infile, translation_table)
+    glength = length(genome)
+    if ~isnothing(rotate_to)
+        gffs, genome = rotate(rotate_to, gffs, genome, glength)
+    end
 
+    if ~isnothing(outfile_fa)
+        open(FASTA.Writer, outfile_fa) do w
+            write(w, FASTA.Record(id, LongDNA{4}(genome[1:glength])))
+        end
+    end
+
+    if ~isnothing(outfile_gff)
+        writeGFF(id, gffs, glength, outfile_gff)
+    else
+        writeGFF(id, gffs, glength, stdout)
+    end
+
+    if ~isnothing(outfile_gb)
+        writeGB(tempfile.uuid, id, translation_table, gffs, outfile_gb, glength)
+    end
+
+    if ~isnothing(outfile_svg)
+        drawgenome(outfile_svg, id, glength, gffs)
+    end
+
+end
+
+function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     @info "$infile"
     target = FASTA.Record()
     reader = open(FASTA.Reader, infile)
@@ -167,39 +197,20 @@ function emma(tempfile::TempFile, infile::String; translation_table=2, rotate_to
     @info "found $(length(cds_matches)) protein-coding genes"
     gffs = getGFF(tempfile.uuid, genome, rev_genome, cds_matches, trn_matches, rrns, glength)
 
-    if ~isnothing(rotate_to)
-        gffs, genome = rotate(rotate_to, gffs, genome, glength)
-    end
-
-    if ~isnothing(outfile_fa)
-        open(FASTA.Writer, outfile_fa) do w
-            write(w, FASTA.Record(id, LongDNA{4}(genome[1:glength])))
-        end
-    end
-
-    if ~isnothing(outfile_gff)
-        writeGFF(id, gffs, outfile_gff, glength)
-    end
-
-    if ~isnothing(outfile_gb)
-        writeGB(tempfile.uuid, id, translation_table, gffs, outfile_gb, glength)
-    end
-
-    if ~isnothing(outfile_svg)
-        drawgenome(outfile_svg, id, glength, gffs)
-    end
-
-    ##cleanup
-
+    return id, gffs, genome
 end
 
-function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing,
-    outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
-    tempfile = TempFile(".")
+
+function emma(infile::String; translation_table=2, rotate_to::MayBeString=nothing, outfile_gff::MayBeString=nothing,
+    outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing, outfile_svg::MayBeString=nothing, tempdir::MayBeString=nothing)
+    if tempdir === nothing
+        tempdir = "."
+    end
+    tempfile = TempFile(tempdir)
     try
         emma(tempfile, infile; translation_table=translation_table,
             rotate_to=rotate_to, outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,
-            outfile_svg=outfile_svg, loglevel=loglevel)
+            outfile_svg=outfile_svg)
     finally
         cleanfiles(tempfile)
     end

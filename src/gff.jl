@@ -168,16 +168,21 @@ function getGFF(uid::UUID, genome::CircularSequence, rev_genome::CircularSequenc
     return sort!(gffs; by=x -> x.fstart)
 end
 
-function writeGFF(id::AbstractString, gffs::Vector{GFF}, outfile::String, glength::Integer)
+function writeGFF(id::AbstractString, gffs::Vector{GFF}, glength::Integer, outfile::String)
     open(outfile, "w") do out
-        write(out, "##gff-version 3\n")
-        write(out, "##source-version Emma beta\n")
-        write(out, "##sequence-region	$id	1	$glength\n")
-        write(out, "$id	Emma	region	1	$glength	.	+	0	Is_circular=true\n")
-        for gff in gffs
-            write(out, join([id, gff.source, gff.ftype, gff.fstart, gff.fend, gff.score, gff.strand, gff.phase, gff.attributes], "\t"), "\n")
-        end
+        writeGFF(id, gffs, glength, out)
     end
+end
+
+function writeGFF(id::AbstractString, gffs::Vector{GFF}, glength::Integer, out::IO)
+    write(out, "##gff-version 3\n")
+    write(out, "##source-version Emma beta\n")
+    write(out, "##sequence-region	$id	1	$glength\n")
+    write(out, "$id	Emma	region	1	$glength	.	+	0	Is_circular=true\n")
+    for gff in gffs
+        write(out, join([id, gff.source, gff.ftype, gff.fstart, gff.fend, gff.score, gff.strand, gff.phase, gff.attributes], "\t"), "\n")
+    end
+
 end
 
 #= function is_encompassed(outer_gene, inner_gene)
