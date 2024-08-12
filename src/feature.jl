@@ -46,7 +46,7 @@ function five2three(x, y, glength)
 end
 
 # merge adjacent matches to same model
-function rationalise_matches!(matches::Vector{FeatureMatch}, glength::Integer)
+function rationalise_matches!(matches::Vector{FeatureMatch}, glength::Integer)::Vector{FeatureMatch}
     length(matches) < 2 && return matches
     filter!(x -> x.evalue < 1e-5, matches)
     for i in matches, j in matches

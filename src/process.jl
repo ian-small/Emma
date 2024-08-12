@@ -72,7 +72,7 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence, glength)
     end
 end
 
-function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
+function emma(tempfile::TempFile, infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing, outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
 
     global_logger(ConsoleLogger(loglevel == "debug" ? Logging.Debug : Logging.Info))
 
@@ -88,7 +88,7 @@ function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gf
 
     #extend genome
     extended_genome = genome[1:glength+100]
-    tempfile = TempFile(".")
+
     name = tempfilename(tempfile, "tmp.extended.fa")
     writer = open(FASTA.Writer, name)
     write(writer, FASTA.Record(id, extended_genome))
@@ -190,5 +190,17 @@ function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gf
     end
 
     ##cleanup
-    cleanfiles(tempfile)
+
+end
+
+function emma(infile::String; translation_table=2, rotate_to=nothing, outfile_gff=nothing,
+    outfile_gb=nothing, outfile_fa=nothing, outfile_svg=nothing, loglevel="Info")
+    tempfile = TempFile(".")
+    try
+        emma(tempfile, infile; translation_table=translation_table,
+            rotate_to=rotate_to, outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,
+            outfile_svg=outfile_svg, loglevel=loglevel)
+    finally
+        cleanfiles(tempfile)
+    end
 end

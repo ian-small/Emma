@@ -46,6 +46,7 @@ end
 
 function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int16, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
     glength = length(genome)
+    norfs = 0
     for (f, frame) in enumerate(starts)
         nextstop = 0
         for (s, start) in enumerate(frame)
@@ -62,19 +63,24 @@ function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequ
             translation = BioSequences.translate(genome.sequence[start:(nextstop-1)], code=ncbi_trans_table[translation_table])
             translation[1] = AA_M
             write(writer, FASTA.Record(id * "*" * strand * "*" * string(start) * "-" * string(nextstop), translation))
+            norfs += 1
         end
     end
+    norfs
 end
 
 function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSequence, translation_table::Int16, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
     out = tempfilename(tempfile, "tmp.orfs.fa")
     writer = open(FASTA.Writer, out)
-    getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
-    getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
+    norfs = getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
+    norfs += getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
     close(writer)
-    hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     ret = tempfilename(tempfile, "tmp.domt")
+    if norfs == 0
+        error("no orfs found!")
+    end
+    hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     cmd = `hmmsearch --domtblout $ret $hmmpath $out`
     outfile = tempfilename(tempfile, "tmp.hmmsearch.out")
     run(pipeline(cmd, stdout=outfile))
