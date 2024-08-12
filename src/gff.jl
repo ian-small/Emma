@@ -10,7 +10,7 @@ mutable struct GFF
 end
 
 function get_attributes(feature::GFF)
-    attributes = Dict{String, String}()
+    attributes = Dict{String,String}()
     for attribute in split(feature.attributes, ";")
         bits = split(attribute, "=")
         key = first(bits)
@@ -27,7 +27,9 @@ end
 function FMcoords2GFF(strand::Char, start::Integer, length::Integer, glength::Integer)
     gffstart = strand == '+' ? start : mod1(reverse_complement(start + length - 1, glength), glength)
     gffend = strand == '+' ? start + length - 1 : reverse_complement(start, glength)
-    if gffend < gffstart; gffend += glength; end
+    if gffend < gffstart
+        gffend += glength
+    end
     gffstart, gffend
 end
 
@@ -44,16 +46,16 @@ function CDS2GFF(cds::FeatureMatch, genome::CircularSequence, rev_genome::Circul
     if startcodon ∈ [dna"CTG", dna"TTG"]
         attributes *= ";Note=putative non-standard start codon $startcodon"
     end
-    trnidx = findfirst(t->circularin(t.fm.target_from, cdsstop-2, 3, glength), trns)
+    trnidx = findfirst(t -> circularin(t.fm.target_from, cdsstop - 2, 3, glength), trns)
     if !isnothing(trnidx)
-        stopcodon = cds.strand == '+' ? copy(genome[cdsstop-2:cdsstop-2+circulardistance(cdsstop-2, trns[trnidx].fm.target_from, glength)-1]) : copy(rev_genome[cdsstop-2:cdsstop-2+circulardistance(cdsstop-2, trns[trnidx].fm.target_from, glength)-1])
+        stopcodon = cds.strand == '+' ? copy(genome[cdsstop-2:cdsstop-2+circulardistance(cdsstop - 2, trns[trnidx].fm.target_from, glength)-1]) : copy(rev_genome[cdsstop-2:cdsstop-2+circulardistance(cdsstop - 2, trns[trnidx].fm.target_from, glength)-1])
         cdsstop = trns[trnidx].fm.target_from - 1
         while length(stopcodon) < 3
             push!(stopcodon, DNA_A)
         end
         attributes *= ";Note=putative $stopcodon stop codon is completed by the addition of 3' A residues to the mRNA"
     end
-    gffstart, gffend = FMcoords2GFF(cds.strand, cdsstart, circulardistance(cdsstart, cdsstop+1, glength), glength)
+    gffstart, gffend = FMcoords2GFF(cds.strand, cdsstart, circulardistance(cdsstart, cdsstop + 1, glength), glength)
     return GFF("Emma", "CDS", string(gffstart), string(gffend), string(cds.evalue), cds.strand, "0", attributes)
 end
 
@@ -69,11 +71,11 @@ function tRNA2GFF(trn::tRNA, glength::Integer)
         @warn "trnD $(trn.anticodon) edited to GUC by RNA editing"
     elseif !haskey(anticodon2trn, trn.anticodon)
         attributes *= ";Note=tRNA has no valid anticodon"
-        @warn "no valid anticodon found for $(name)"
+        @warn "no valid anticodon found for $(trn.anticodon)"
     end
     if typeof(attributes) != Missing
         return GFF("Emma", "tRNA", string(gffstart), string(gffend), string(trn.fm.evalue), trn.fm.strand, ".", attributes)
-    else 
+    else
         return nothing
     end
 end
@@ -111,12 +113,12 @@ end
 end =#
 
 function getGFF(uid::UUID, genome::CircularSequence, rev_genome::CircularSequence, cds_matches::Vector{FeatureMatch},
-             trn_matches::Vector{tRNA}, rRNAs::Vector{FeatureMatch}, glength::Integer)
+    trn_matches::Vector{tRNA}, rRNAs::Vector{FeatureMatch}, glength::Integer)
 
     gffs = GFF[]
-    genome_length = length(genome)    
+    genome_length = length(genome)
 
-    function writeone(gff::Union{Nothing, GFF})
+    function writeone(gff::Union{Nothing,GFF})
         if ~isnothing(gff)
             push!(gffs, gff)
         end
@@ -162,8 +164,8 @@ function getGFF(uid::UUID, genome::CircularSequence, rev_genome::CircularSequenc
         gff.attributes = "ID=$rrn_id;Parent=$gene_id;Name=$name" * gff.attributes
         writeone(gff)
     end
-    
-    return sort!(gffs; by = x ->x.fstart)
+
+    return sort!(gffs; by=x -> x.fstart)
 end
 
 function writeGFF(id::AbstractString, gffs::Vector{GFF}, outfile::String, glength::Integer)
@@ -173,7 +175,7 @@ function writeGFF(id::AbstractString, gffs::Vector{GFF}, outfile::String, glengt
         write(out, "##sequence-region	$id	1	$glength\n")
         write(out, "$id	Emma	region	1	$glength	.	+	0	Is_circular=true\n")
         for gff in gffs
-            write(out, join([id, gff.source, gff.ftype,gff.fstart,gff.fend,gff.score,gff.strand,gff.phase,gff.attributes], "\t"), "\n")
+            write(out, join([id, gff.source, gff.ftype, gff.fstart, gff.fend, gff.score, gff.strand, gff.phase, gff.attributes], "\t"), "\n")
         end
     end
 end
@@ -235,4 +237,4 @@ function relocate!(gff::GFF, offset::Integer, glength::Integer)
     gff.fstart = string(fstart)
     gff.fend = string(fend)
 end
-            
+
