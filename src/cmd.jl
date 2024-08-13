@@ -54,15 +54,17 @@ MayBeString = Union{Nothing,String}
 
 function get_args()
     args = @dictarguments begin
-        @helpusage "Emma/src/command.jl [options] <FASTA_file>"
+        @helpusage "Emma/src/command.jl [options] <FASTA_files or directories>"
         @helpdescription """
             If there is more than one fasta file to annotate
             then if the options (--gff etc.) are *not* directories
             they will be used as suffixes for the output filenames and
             they will be put alongside the input fasta files.
             """
-        @argumentdefault Int16 2 translation_table "--transl-table"
-        @arghelp "NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates"
+        # @argumentdefault Int16 2 translation_table "--transl-table"
+        # @arghelp "NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates"
+        @argumentflag invertebrates "--invertebrates" "-i"
+        @arghelp "NCBI translation table; select invertebrates instead of vertebrates"
         @argumentoptional String rotate_to "--rotate"
         @arghelp "rotate genome and annotations to start with this feature"
         @argumentoptional String FA_out "--fa"
@@ -77,6 +79,8 @@ function get_args()
         @arghelp "loglevel (info,warn,error,debug)"
         @argumentdefault String "." tempdir "--tempdir"
         @arghelp "directory to write temporary files into"
+        @argumentflag failearly "--fail-early"
+        @arghelp "if Emma fails on multiple FASTA inputs then fail immeadiately"
         # @positionalrequired String FASTA_file
         @positionalleftover String FASTA_files "fastafiles"
         @arghelp "files/directories for fasta input"
@@ -92,13 +96,19 @@ function main()
     global_logger(ConsoleLogger(stderr, llevel, meta_formatter=Logging.default_metafmt))
 
     function getout(accession, out, ext)
+        function de(ext)
+            if !startswith(ext, ".")
+                return ".$(ext)"
+            end
+            ext
+        end
         if out === nothing
             return nothing
         end
         if isdir(out)
             return joinpath(out, basename(accession) * ext)
         end
-        return accession * out
+        return accession * de(out)
     end
     function getout1(accession, out, ext)
         if out === nothing
@@ -110,7 +120,12 @@ function main()
         return out
     end
 
+    if all([isnothing(a) for a in [args[:GFF_out], args[:FA_out], args[:SVG_out], args[:GB_out]]])
+        println("no output specified! type --help")
+        return
+    end
     fastafiles = args[:FASTA_files]
+    translation_table = args[:invertebrates] > 0 ? 5 : 2
     function readfiles(d)
         if isdir(d)
             return filter(x -> endswith(x, ".fa") || endswith(x, ".fasta"), readdir(d, join=true))
@@ -123,6 +138,7 @@ function main()
     else
         ofunc = getout1
     end
+    Base.exit_on_sigint(false)
     for fasta in fastafiles
         accession = first(splitext(fasta))
 
@@ -131,10 +147,18 @@ function main()
         outfile_svg = ofunc(accession, args[:SVG_out], ".svg")
         outfile_gb = ofunc(accession, args[:GB_out], ".tbl")
         try
-            emma(fasta; translation_table=args[:translation_table], rotate_to=args[:rotate_to],
-                outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa, outfile_svg=outfile_svg, tempdir=args[:tempdir])
+            emma(fasta; translation_table=translation_table, rotate_to=args[:rotate_to],
+                outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,
+                outfile_svg=outfile_svg, tempdir=args[:tempdir])
         catch e
-            @error "$(accession): $e"
+            if e isa InterruptException
+                @info "Abort!"
+                exit(0)
+            end
+            @error "$(accession): failed! $(e)"
+            if args[:failearly] > 0
+                rethrow()
+            end
         end
     end
 

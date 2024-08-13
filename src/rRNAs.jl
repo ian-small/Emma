@@ -6,10 +6,10 @@ const rrn2product= Dict("12srna"=>"12S rRNA","rrn12"=>"12S rRNA","16srna"=>"16S 
 
 function rrnsearch(tempfile::TempFile)
     hmmpath = joinpath(emmamodels, "rrn", "all_rrn.hmm")
-    extended = tempfilename(tempfile, "tmp.extended.fa")
-    tbl = tempfilename(tempfile, "tmp.tbl")
+    extended = tempfilename(tempfile, "extended.fa")
+    tbl = tempfilename(tempfile, "tbl")
     cmd = `nhmmer --tblout $tbl $hmmpath $extended`
-    outfile = tempfilename(tempfile, "tmp.nhmmer.out")
+    outfile = tempfilename(tempfile, "nhmmer.out")
     run(pipeline(cmd, stdout=outfile))
     return tbl
 end

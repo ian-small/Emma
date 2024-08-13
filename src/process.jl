@@ -45,8 +45,9 @@ function remove_duplicate_features(matches::Vector)
     return features
 end
 
-function rotate(rotate_to::String, GFFs, genome::CircularSequence, glength)
+function rotate(rotate_to::String, GFFs, genome::CircularSequence)
     feature_idx = findfirst(x -> occursin(rotate_to, x.attributes), GFFs)
+    glength = length(genome)
     if feature_idx ≠ nothing
         first_feature = GFFs[feature_idx]
         if first_feature.strand == '-'
@@ -73,37 +74,7 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence, glength)
 end
 MayBeString = Union{Nothing,String}
 
-function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
-    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing,
-    outfile_svg::MayBeString=nothing)
 
-    id, gffs, genome = emmaone(tempfile, infile, translation_table)
-    glength = length(genome)
-    if ~isnothing(rotate_to)
-        gffs, genome = rotate(rotate_to, gffs, genome, glength)
-    end
-
-    if ~isnothing(outfile_fa)
-        open(FASTA.Writer, outfile_fa) do w
-            write(w, FASTA.Record(id, LongDNA{4}(genome[1:glength])))
-        end
-    end
-
-    if ~isnothing(outfile_gff)
-        writeGFF(id, gffs, glength, outfile_gff)
-    else
-        writeGFF(id, gffs, glength, stdout)
-    end
-
-    if ~isnothing(outfile_gb)
-        writeGB(tempfile.uuid, id, translation_table, gffs, outfile_gb, glength)
-    end
-
-    if ~isnothing(outfile_svg)
-        drawgenome(outfile_svg, id, glength, gffs)
-    end
-
-end
 
 function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     @info "$infile"
@@ -119,10 +90,10 @@ function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     #extend genome
     extended_genome = genome[1:glength+100]
 
-    name = tempfilename(tempfile, "tmp.extended.fa")
-    writer = open(FASTA.Writer, name)
-    write(writer, FASTA.Record(id, extended_genome))
-    close(writer)
+    name = tempfilename(tempfile, "extended.fa")
+    open(FASTA.Writer, name) do writer
+        write(writer, FASTA.Record(id, extended_genome))
+    end
 
     #find tRNAs
     trn_matches = parse_trn_alignments(cmsearch(tempfile, "trn", "all_trn.cm"), glength)
@@ -200,9 +171,39 @@ function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     return id, gffs, genome
 end
 
+function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
+    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing,
+    outfile_svg::MayBeString=nothing)
 
-function emma(infile::String; translation_table=2, rotate_to::MayBeString=nothing, outfile_gff::MayBeString=nothing,
-    outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing, outfile_svg::MayBeString=nothing, tempdir::MayBeString=nothing)
+    id, gffs, genome = emmaone(tempfile, infile, translation_table)
+    glength = length(genome)
+    if ~isnothing(rotate_to)
+        gffs, genome = rotate(rotate_to, gffs, genome)
+    end
+
+    if ~isnothing(outfile_fa)
+        open(FASTA.Writer, outfile_fa) do writer
+            write(writer, FASTA.Record(id, LongDNA{4}(genome[1:glength])))
+        end
+    end
+
+    if ~isnothing(outfile_gff)
+        writeGFF(id, gffs, glength, outfile_gff)
+    end
+
+    if ~isnothing(outfile_gb)
+        writeGB(outfile_gb, tempfile.uuid, id, translation_table, gffs)
+    end
+
+    if ~isnothing(outfile_svg)
+        drawgenome(outfile_svg, id, glength, gffs)
+    end
+
+end
+
+function emma(infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
+    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing, outfile_svg::MayBeString=nothing,
+    tempdir::MayBeString=nothing)
     if tempdir === nothing
         tempdir = "."
     end

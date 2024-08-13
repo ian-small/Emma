@@ -44,7 +44,7 @@ function getcodons(seq::CircularSequence, pattern)
     return positions, codons
 end
 
-function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int16, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
+function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
     glength = length(genome)
     norfs = 0
     for (f, frame) in enumerate(starts)
@@ -69,20 +69,21 @@ function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequ
     norfs
 end
 
-function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSequence, translation_table::Int16, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
+function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSequence, translation_table::Int,
+    fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
-    out = tempfilename(tempfile, "tmp.orfs.fa")
-    writer = open(FASTA.Writer, out)
-    norfs = getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
-    norfs += getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
-    close(writer)
+    out = tempfilename(tempfile, "orfs.fa")
+    open(FASTA.Writer, out) do writer
+        norfs = getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
+        norfs += getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
+    end
     ret = tempfilename(tempfile, "tmp.domt")
     if norfs == 0
         error("no orfs found!")
     end
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     cmd = `hmmsearch --domtblout $ret $hmmpath $out`
-    outfile = tempfilename(tempfile, "tmp.hmmsearch.out")
+    outfile = tempfilename(tempfile, "hmmsearch.out")
     run(pipeline(cmd, stdout=outfile))
     return ret
 end
