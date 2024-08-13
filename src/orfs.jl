@@ -73,9 +73,10 @@ function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSeque
     fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
     out = tempfilename(tempfile, "orfs.fa")
-    open(FASTA.Writer, out) do writer
+    norfs = open(FASTA.Writer, out) do writer
         norfs = getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
         norfs += getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
+        norfs
     end
     ret = tempfilename(tempfile, "tmp.domt")
     if norfs == 0
