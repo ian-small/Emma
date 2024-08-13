@@ -4,7 +4,7 @@ struct TempFile
     uuid::UUID
     ext::Vector{String}
     function TempFile(directory::String=".")
-        new(directory, uuid4(), [])
+        new(directory, uuid1(), [])
     end
 end
 function tempfilename(tempfile::TempFile, ext::String)

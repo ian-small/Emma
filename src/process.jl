@@ -69,7 +69,7 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence)
         return GFFs, genome
     else
         @warn "Positional translation not possible due to missing feature: $rotate_to"
-        return GFFs, genome
+        return GFFs, genome, offset
     end
 end
 MayBeString = Union{Nothing,String}
@@ -79,8 +79,9 @@ MayBeString = Union{Nothing,String}
 function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     @info "$infile"
     target = FASTA.Record()
-    reader = open(FASTA.Reader, infile)
-    read!(reader, target)
+    open(FASTA.Reader, infile) do reader
+        read!(reader, target)
+    end
     id = FASTA.identifier(target)
     genome = CircularSequence(FASTA.sequence(LongDNA{4}, target))
     glength = length(genome)
@@ -178,7 +179,7 @@ function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, 
     id, gffs, genome = emmaone(tempfile, infile, translation_table)
     glength = length(genome)
     if ~isnothing(rotate_to)
-        gffs, genome = rotate(rotate_to, gffs, genome)
+        gffs, genome, offset = rotate(rotate_to, gffs, genome)
     end
 
     if ~isnothing(outfile_fa)

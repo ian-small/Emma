@@ -9,7 +9,7 @@ using Unicode
 using GenomicAnnotations
 using UUIDs
 
-export main, emma, emmaone, writeGFF, tempfilename, TempFile, drawgenome, rotate
+export main, emma, emmaone, writeGFF, writeGB, tempfilename, TempFile, drawgenome, rotate
 
 #const emmamodels = "/data/Emma/emma_vertebrate_models"
 const emmamodels = joinpath(artifact"Emma_vertebrate_models", "emma-models-1.0.0")
