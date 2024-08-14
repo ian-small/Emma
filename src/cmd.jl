@@ -80,10 +80,10 @@ function get_args()
         @argumentdefault String "." tempdir "--tempdir"
         @arghelp "directory to write temporary files into"
         @argumentflag failearly "--fail-early"
-        @arghelp "if Emma fails on multiple FASTA inputs then fail immeadiately"
+        @arghelp "if Emma fails on multiple FASTA inputs then fail immediately"
         # @positionalrequired String FASTA_file
         @positionalleftover String FASTA_files "fastafiles"
-        @arghelp "files/directories for fasta input"
+        # @arghelp "files/directories for fasta input"
     end
     args
 end
