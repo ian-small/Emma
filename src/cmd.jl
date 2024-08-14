@@ -125,7 +125,7 @@ function main()
         return
     end
     fastafiles = args[:FASTA_files]
-    translation_table = args[:invertebrates] > 0 ? 5 : 2
+    translation_table = args[:invertebrates] ? 5 : 2
     function readfiles(d)
         if isdir(d)
             return filter(x -> endswith(x, ".fa") || endswith(x, ".fasta"), readdir(d, join=true))
@@ -156,7 +156,7 @@ function main()
                 exit(0)
             end
             @error "$(accession): failed! $(e)"
-            if args[:failearly] > 0
+            if args[:failearly]
                 rethrow()
             end
         end
