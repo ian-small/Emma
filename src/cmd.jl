@@ -121,7 +121,7 @@ function main()
     end
 
     if all([isnothing(a) for a in [args[:GFF_out], args[:FA_out], args[:SVG_out], args[:GB_out]]])
-        println("no output specified! type --help")
+        println(stderr, "no output specified! type --help")
         return
     end
     fastafiles = args[:FASTA_files]
