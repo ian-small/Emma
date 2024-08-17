@@ -10,7 +10,7 @@ function rrnsearch(tempfile::TempFile)
     tbl = tempfilename(tempfile, "tbl")
     cmd = `nhmmer --tblout $tbl $hmmpath $extended`
     outfile = tempfilename(tempfile, "nhmmer.out")
-    run(pipeline(cmd, stdout=outfile))
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
     return tbl
 end
 

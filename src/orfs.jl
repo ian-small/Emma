@@ -85,7 +85,7 @@ function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSeque
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
     cmd = `hmmsearch --domtblout $ret $hmmpath $out`
     outfile = tempfilename(tempfile, "hmmsearch.out")
-    run(pipeline(cmd, stdout=outfile))
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
     return ret
 end
 

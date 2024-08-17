@@ -159,7 +159,7 @@ function cmsearch(tempfile::TempFile, modeldir::String, modelfile::String)
     name = tempfilename(tempfile, "extended.fa")
     cmd = `cmsearch $cmpath $name`
     outfile = tempfilename(tempfile, "cmsearch.out")
-    run(pipeline(cmd, stdout=outfile))
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
     return outfile
 end
 
@@ -171,7 +171,7 @@ function cmsearch(tempfile::TempFile, id::String, modeldir::String, tRNA::LongDN
     cmpath = joinpath(emmamodels, modeldir, trn2model[id] * ".cm")
     cmd = `cmsearch $cmpath $name`
     outfile = tempfilename(tempfile, "cmsearch.out")
-    run(pipeline(cmd, stdout=outfile))
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
     return outfile
 end
 
