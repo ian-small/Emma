@@ -83,7 +83,8 @@ function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSeque
         error("no orfs found!")
     end
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
-    cmd = `hmmsearch --domtblout $ret $hmmpath $out`
+    hmmsearch = which("hmmsearch")
+    cmd = `$hmmsearch --domtblout $ret $hmmpath $out`
     outfile = tempfilename(tempfile, "hmmsearch.out")
     run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
     return ret

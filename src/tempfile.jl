@@ -21,3 +21,9 @@ function cleanfiles(tempfile::TempFile)
     end
 
 end
+
+function which(cmd::String)::String
+    # place holder... do we have cmd in our PATH or not...
+    # this should be like python which.
+    cmd
+end
