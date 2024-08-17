@@ -72,11 +72,10 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence)
         return GFFs, genome, offset
     end
 end
-MayBeString = Union{Nothing,String}
-
 
 
 function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
+    # entrypoint for EnnaServer.jl
     @info "$infile"
     target = FASTA.Record()
     open(FASTA.Reader, infile) do reader
@@ -172,6 +171,10 @@ function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     return id, gffs, genome
 end
 
+
+MayBeString = Union{Nothing,String}
+
+
 function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
     outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing,
     outfile_svg::MayBeString=nothing)
@@ -203,8 +206,8 @@ function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, 
 end
 
 function emma(infile::String; translation_table::Integer=2, rotate_to::MayBeString=nothing,
-    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing, outfile_svg::MayBeString=nothing,
-    tempdir::MayBeString=nothing)
+    outfile_gff::MayBeString=nothing, outfile_gb::MayBeString=nothing, outfile_fa::MayBeString=nothing,
+    outfile_svg::MayBeString=nothing, tempdir::MayBeString=nothing)
     if tempdir === nothing
         tempdir = "."
     end

@@ -1,9 +1,6 @@
 # import ArgParse: ArgParseSettings, @add_arg_table!, parse_args
 import Logging
 using ArgMacros
-
-MayBeString = Union{Nothing,String}
-
 # function emma_args(args::Vector{String}=ARGS)
 #     emma_args = ArgParseSettings(prog="emma", autofix_names=true)
 
