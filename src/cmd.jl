@@ -143,6 +143,7 @@ function main()
         outfile_fa = ofunc(accession, args[:FA_out], ".fa")
         outfile_svg = ofunc(accession, args[:SVG_out], ".svg")
         outfile_gb = ofunc(accession, args[:GB_out], ".tbl")
+        @info "$fasta"
         try
             emma(fasta; translation_table=translation_table, rotate_to=args[:rotate_to],
                 outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,

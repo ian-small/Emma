@@ -75,8 +75,6 @@ end
 
 
 function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
-    # entrypoint for EnnaServer.jl
-    @info "$infile"
     target = FASTA.Record()
     open(FASTA.Reader, infile) do reader
         read!(reader, target)
