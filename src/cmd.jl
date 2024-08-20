@@ -125,7 +125,7 @@ function main()
     translation_table = args[:invertebrates] ? 5 : 2
     function readfiles(d)
         if isdir(d)
-            return filter(x -> endswith(x, ".fa") || endswith(x, ".fasta"), readdir(d, join=true))
+            return filter(x -> endswith(x, ".fa") ||  endswith(x, ".fna") || endswith(x, ".fasta"), readdir(d, join=true))
         end
         [d]
     end
