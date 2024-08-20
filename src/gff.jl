@@ -221,7 +221,7 @@ function add_mRNAGFFs(cds_matches::Vector{FeatureMatch}, trns::Vector{tRNA}, gle
     return mRNAs      
 end =#
 
-reverse_strand = Dict('+' => '-', '-' => '+', '.' => '.')
+const reverse_strand = Dict('+' => '-', '-' => '+', '.' => '.')
 
 function reverse_complement!(gff::GFF, glength::Integer)
     gff.strand = reverse_strand[gff.strand]
