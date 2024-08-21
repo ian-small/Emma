@@ -1,51 +1,6 @@
-# import ArgParse: ArgParseSettings, @add_arg_table!, parse_args
 import Logging
 using ArgMacros
-# function emma_args(args::Vector{String}=ARGS)
-#     emma_args = ArgParseSettings(prog="emma", autofix_names=true)
 
-#     @add_arg_table! emma_args begin
-#         "--level", "-l"
-#         arg_type = String
-#         default = "info"
-#         help = "log level (info,warn,error,debug)"
-#         "--transl-table"
-#         arg_type = Int
-#         default = 2
-#         help = "NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates"
-#         "--rotate"
-#         arg_type = String
-#         help = "rotate genome and annotations to start with this feature"
-#         "--gff"
-#         arg_type = String
-#         help = "output gff file"
-#         "--fa"
-#         arg_type = String
-#         help = "output FASTA file (only makes sense with --rotate)"
-#         "--svg"
-#         arg_type = String
-#         help = "output SVG image"
-#         "--tbl"
-#         arg_type = String
-#         help = "output GB file"
-#         "--tempdir", "-t"
-#         arg_type = String
-#         help = "directory to use for temporary files [default is current directory]"
-#         "fastafiles"
-#         arg_type = Stringusing ArgMacros
-#         nargs = '+'
-#         action = :store_arg
-#         help = "fasta files to process"
-#     end
-
-#     emma_args.epilog = """
-#     If there are multiple FASTA files then (--gff|--fa|--svg|--gb)
-#     can refer to a directory using ArgMacrosin which case the respective files will be
-#     placed there under the original filename (with new extension). Otherwise
-#     the values will be used as a suffix.
-#     """
-#     parse_args(args, emma_args; as_symbols=true)
-# end
 
 
 
@@ -125,7 +80,7 @@ function main()
     translation_table = args[:invertebrates] ? 5 : 2
     function readfiles(d)
         if isdir(d)
-            return filter(x -> endswith(x, ".fa") ||  endswith(x, ".fna") || endswith(x, ".fasta"), readdir(d, join=true))
+            return filter(x -> endswith(x, r"\.(fa|fna|fasta)"), readdir(d, join=true))
         end
         [d]
     end
