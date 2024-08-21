@@ -1,5 +1,4 @@
 
-import CodecZlib: GzipDecompressorStream
 
 const minORF = 150
 
@@ -76,21 +75,18 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence)
     end
 end
 
-function maybe_gzread(f::Function, filename::String)
-    if endswith(filename, ".gz")
-        open(z -> z |> GzipDecompressorStream |> f, filename)
-    else
-        open(f, filename)
-    end
-end
 
 function emmaone(tempfile::TempFile, infile::String, translation_table::Integer)
     target = FASTA.Record()
-    maybe_gzread(infile) do io
-        FASTA.Reader(io) do reader
-            read!(reader, target)
-        end
+    open(FASTA.Reader, infile) do reader
+        read!(reader, target)
     end
+    emmaone(tempfile, target, translation_table)
+end
+
+
+function emmaone(tempfile::TempFile, target::FASTA.Record, translation_table::Integer)
+
     id = FASTA.identifier(target)
     genome = CircularSequence(FASTA.sequence(LongDNA{4}, target))
     glength = length(genome)
