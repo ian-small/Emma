@@ -61,6 +61,8 @@ To annotate many fasta files in the directory 'my_genomes' and save the generate
 
 `julia --project=~/github/Emma ~/github/Emma/src/command.jl --tbl my_genomes my_genomes`
 
+If you want some concurrency the add `--threads=8` to the command line.
+
 ## Install Emma as a package
 
 You can also invoke Emma if you have it installed in your project (e.g. with say

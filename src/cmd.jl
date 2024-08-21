@@ -2,8 +2,6 @@ import Logging
 using ArgMacros
 
 
-
-
 function get_args()
     args = @dictarguments begin
         @helpusage "Emma/src/command.jl [options] <FASTA_files or directories>"
@@ -29,8 +27,8 @@ function get_args()
         @arghelp "file/dir for svg output"
         @argumentdefault String "info" loglevel "--loglevel"
         @arghelp "loglevel (info,warn,error,debug)"
-        @argumentdefault String "." tempdir "--tempdir"
-        @arghelp "directory to write temporary files into"
+        @argumentoptional String tempdir "--tempdir"
+        @arghelp "directory to write temporary files into (defaults to /tmp or similar...)"
         @argumentflag failearly "--fail-early"
         @arghelp "if Emma fails on multiple FASTA inputs then fail immediately"
         # @positionalrequired String FASTA_file
@@ -72,6 +70,11 @@ function main()
         return out
     end
 
+    tempdir = args[:tempdir]
+    if tempdir === nothing
+        tempdir = tempdir()
+    end
+
     if all([isnothing(a) for a in [args[:GFF_out], args[:FA_out], args[:SVG_out], args[:GB_out]]])
         println(stderr, "no output specified! type --help")
         return
@@ -90,30 +93,41 @@ function main()
     else
         ofunc = getout1
     end
-    Base.exit_on_sigint(false)
-    for fasta in fastafiles
-        accession = first(splitext(fasta))
-
-        outfile_gff = ofunc(accession, args[:GFF_out], ".gff")
-        outfile_fa = ofunc(accession, args[:FA_out], ".fa")
-        outfile_svg = ofunc(accession, args[:SVG_out], ".svg")
-        outfile_gb = ofunc(accession, args[:GB_out], ".tbl")
-        @info "$fasta"
+    function doone(fasta)
+        ncid = Ref{String}("")
         try
+            accession = first(splitext(fasta))
+            ncid[] = basename(accession)
+
+            outfile_gff = ofunc(accession, args[:GFF_out], ".gff")
+            outfile_fa = ofunc(accession, args[:FA_out], ".fa")
+            outfile_svg = ofunc(accession, args[:SVG_out], ".svg")
+            outfile_gb = ofunc(accession, args[:GB_out], ".tbl")
+            @info "$fasta"
             emma(fasta; translation_table=translation_table, rotate_to=args[:rotate_to],
                 outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,
-                outfile_svg=outfile_svg, tempdir=args[:tempdir])
+                outfile_svg=outfile_svg, tempdir=tempdir)
         catch e
             if e isa InterruptException
                 @info "Abort!"
                 exit(0)
             end
-            @error "$(accession): failed! $(e)"
+            @error "\"$(ncid[])\" failed! $(e)"
             if args[:failearly]
                 rethrow()
             end
         end
     end
-
-
+    Base.exit_on_sigint(false)
+    if Threads.nthreads() == 1
+        for fasta in fastafiles
+            doone(fasta)
+        end
+    else
+        Threads.@threads for fasta in fastafiles
+            doone(fasta)
+        end
+    end
 end
+
+
