@@ -64,10 +64,12 @@ function drawgenome(svgfile::String, id::AbstractString, glength::Integer, gffs:
     end
 end
 
-function drawgenome(id::AbstractString, glength::Integer, gffs::Vector{GFF})::String
+function drawgenome(id::AbstractString, glength::Integer, gffs::Vector{GFF}; bg="white")::String
     svg = @savesvg begin
         origin()
-        background("white")
+        if bg !== nothing
+            background(bg)
+        end
         setline(0.5)
         setcolor("black")
         Luxor.circle(gcentre, gradius, action=:stroke)
