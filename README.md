@@ -32,7 +32,8 @@ Usage: Emma/src/command.jl [options] <FASTA file or directory>
 
 Optional Arguments:
 
---transl_table NCBI translation table; 2 for vertebrates (the default), 5 for invertebrates
+--invertebrates (flag) NCBI translation table  for
+invertebrates instead of vertebrates (the default)
 
 --rotate rotate genome and annotations to start with this feature
 
@@ -59,11 +60,14 @@ To rotate a single genome to start with MT-TM and save the rotated sequence in .
 To annotate many fasta files in the directory 'my_genomes' and save the generated .tbl files in the same directory:
 
 `julia --project=~/github/Emma ~/github/Emma/src/command.jl --tbl my_genomes my_genomes`
-      
 
+If you want some concurrency the add `--threads=8` to the command line.
 
+## Install Emma as a package
 
+You can also invoke Emma if you have it installed in your project (e.g. with say
+`] add https://github.com/ian-small/Emma.git`).
 
+`julia --project=. -e 'using Emma; main()' -- --tbl my_genomes my_genomes`
 
-
-
+(Note the `--` to separate julia options from Emma's.)

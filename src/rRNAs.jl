@@ -4,12 +4,15 @@ const rrn2symbol = Dict("rrnS"=>"MT-RNR1", "rrnL"=>"MT-RNR2")
 
 const rrn2product= Dict("12srna"=>"12S rRNA","rrn12"=>"12S rRNA","16srna"=>"16S rRNA","rrn16"=>"16S rRNA")
 
-function rrnsearch(uid::UUID)
+function rrnsearch(tempfile::TempFile)
     hmmpath = joinpath(emmamodels, "rrn", "all_rrn.hmm")
-    cmd = `nhmmer --tblout $uid.tbl $hmmpath $uid.extended.fa`
-    outfile = "$uid.nhmmer.out"
-    run(pipeline(cmd, stdout=outfile))
-    return "$uid.tbl"
+    extended = tempfilename(tempfile, "extended.fa")
+    tbl = tempfilename(tempfile, "tbl")
+    nhmmer = which("nhmmer")
+    cmd = `$nhmmer --tblout $tbl $hmmpath $extended`
+    outfile = tempfilename(tempfile, "nhmmer.out")
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
+    return tbl
 end
 
 function parse_tbl(file::String, glength::Integer)

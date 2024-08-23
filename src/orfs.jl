@@ -14,12 +14,12 @@ Codon = LongSubSeq{DNAAlphabet{4}}
 const cds2symbol = Dict("ATP6" => "MT-ATP6", "ATP8" => "MT-ATP8", "COX1" => "MT-CO1", "COX2" => "MT-CO2", "COX3" => "MT-CO3", "CYTB" => "MT-CYTB",
     "ND1" => "MT-ND1", "ND2" => "MT-ND2", "ND3" => "MT-ND3", "ND4" => "MT-ND4", "ND4L" => "MT-ND4L", "ND5" => "MT-ND5", "ND6" => "MT-ND6")
 
-const cds2product = Dict("ND1"=>"NADH dehydrogenase subunit 1","nad1"=>"NADH dehydrogenase subunit 1","ND2"=>"NADH dehydrogenase subunit 2","nad2"=>"NADH dehydrogenase subunit 2",
-"ND3"=>"NADH dehydrogenase subunit 3","nad3"=>"NADH dehydrogenase subunit 3","ND4"=>"NADH dehydrogenase subunit 4","nad4"=>"NADH dehydrogenase subunit 4","ND4L"=>"NADH dehydrogenase subunit 4L",
-"nad4L"=>"NADH dehydrogenase subunit 4L","ND5"=>"NADH dehydrogenase subunit 5","nad5"=>"NADH dehydrogenase subunit 5","ND6"=>"NADH dehydrogenase subunit 6","nad6"=>"NADH dehydrogenase subunit 6",
-"COX1"=>"cytochrome c oxidase subunit I","cox1"=>"cytochrome c oxidase subunit I","COX2"=>"cytochrome c oxidase subunit II","cox2"=>"cytochrome c oxidase subunit II",
-"COX3"=>"cytochrome c oxidase subunit III","cox3"=>"cytochrome c oxidase subunit III","ATP6"=>"ATP synthase F0 subunit 6","atp6"=>"ATP synthase F0 subunit 6","ATP8"=>"ATP synthase F0 subunit 8",
-"atp8"=>"ATP synthase F0 subunit 8","CYTB"=>"cytochrome b","cob"=>"cytochrome b")
+const cds2product = Dict("ND1" => "NADH dehydrogenase subunit 1", "nad1" => "NADH dehydrogenase subunit 1", "ND2" => "NADH dehydrogenase subunit 2", "nad2" => "NADH dehydrogenase subunit 2",
+    "ND3" => "NADH dehydrogenase subunit 3", "nad3" => "NADH dehydrogenase subunit 3", "ND4" => "NADH dehydrogenase subunit 4", "nad4" => "NADH dehydrogenase subunit 4", "ND4L" => "NADH dehydrogenase subunit 4L",
+    "nad4L" => "NADH dehydrogenase subunit 4L", "ND5" => "NADH dehydrogenase subunit 5", "nad5" => "NADH dehydrogenase subunit 5", "ND6" => "NADH dehydrogenase subunit 6", "nad6" => "NADH dehydrogenase subunit 6",
+    "COX1" => "cytochrome c oxidase subunit I", "cox1" => "cytochrome c oxidase subunit I", "COX2" => "cytochrome c oxidase subunit II", "cox2" => "cytochrome c oxidase subunit II",
+    "COX3" => "cytochrome c oxidase subunit III", "cox3" => "cytochrome c oxidase subunit III", "ATP6" => "ATP synthase F0 subunit 6", "atp6" => "ATP synthase F0 subunit 6", "ATP8" => "ATP synthase F0 subunit 8",
+    "atp8" => "ATP synthase F0 subunit 8", "CYTB" => "cytochrome b", "cob" => "cytochrome b")
 
 
 function codonmatches(seq::CircularSequence, pattern)::Vector{Vector{Int32}}
@@ -34,7 +34,7 @@ end
 
 function getcodons(seq::CircularSequence, pattern)
     positions = [Int32[] for f in 1:3]
-    codons = Dict{Int32, Codon}()
+    codons = Dict{Int32,Codon}()
     for m in eachmatch(pattern, seq.sequence[1:seq.length+2])
         n_certain(matched(m)) < 3 && continue
         i::Int32 = m.captured[1]
@@ -44,37 +44,50 @@ function getcodons(seq::CircularSequence, pattern)
     return positions, codons
 end
 
-function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int16, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
+function getorfs!(writer::FASTA.Writer, id::AbstractString, genome::CircularSequence, translation_table::Int, strand::Char, starts::Vector{Vector{Int32}}, stops::Vector{Vector{Int32}}, minORF::Int)
     glength = length(genome)
+    norfs = 0
     for (f, frame) in enumerate(starts)
         nextstop = 0
         for (s, start) in enumerate(frame)
             start < nextstop && continue
-            nextstopidx = searchsortedfirst(stops[f], start+1)
+            nextstopidx = searchsortedfirst(stops[f], start + 1)
             nextstop = first(stops[mod1(f - mod1(glength, 3), 3)]) #frame of next stop when wrapping depends on genome length
             if nextstopidx <= length(stops[f])
                 nextstop = stops[f][nextstopidx]
             end
             circulardistance(start, nextstop, glength) < minORF && continue
-            if nextstop < start; nextstop += glength; end
-            translation = BioSequences.translate(genome.sequence[start:(nextstop-1)], code = ncbi_trans_table[translation_table])
+            if nextstop < start
+                nextstop += glength
+            end
+            translation = BioSequences.translate(genome.sequence[start:(nextstop-1)], code=ncbi_trans_table[translation_table])
             translation[1] = AA_M
             write(writer, FASTA.Record(id * "*" * strand * "*" * string(start) * "-" * string(nextstop), translation))
+            norfs += 1
         end
     end
+    norfs
 end
 
-function orfsearch(uid::UUID, id::AbstractString, genome::CircularSequence, translation_table::Int16, fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
+function orfsearch(tempfile::TempFile, id::AbstractString, genome::CircularSequence, translation_table::Int,
+    fstarts::Vector{Vector{Int32}}, fstops::Vector{Vector{Int32}},
     rstarts::Vector{Vector{Int32}}, rstops::Vector{Vector{Int32}}, minORF::Int)
-    writer = open(FASTA.Writer, "$uid.orfs.fa")
-    getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
-    getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
-    close(writer)
+    out = tempfilename(tempfile, "orfs.fa")
+    norfs = open(FASTA.Writer, out) do writer
+        norfs = getorfs!(writer, id, genome, translation_table, '+', fstarts, fstops, minORF)
+        norfs += getorfs!(writer, id, reverse_complement(genome), translation_table, '-', rstarts, rstops, minORF)
+        norfs
+    end
+    ret = tempfilename(tempfile, "tmp.domt")
+    if norfs == 0
+        error("no orfs found!")
+    end
     hmmpath = joinpath(emmamodels, "cds", "all_cds.hmm")
-    cmd = `hmmsearch --domtblout $uid.domt $hmmpath $uid.orfs.fa`
-    outfile = "$uid.hmmsearch.out"
-    run(pipeline(cmd, stdout=outfile))
-    return "$uid.domt"
+    hmmsearch = which("hmmsearch")
+    cmd = `$hmmsearch --domtblout $ret $hmmpath $out`
+    outfile = tempfilename(tempfile, "hmmsearch.out")
+    run(pipeline(Cmd(cmd, windows_hide=true), stdout=outfile))
+    return ret
 end
 
 struct HMMmatch
@@ -121,12 +134,12 @@ function parse_domt(file::String, glength::Integer)
             orfstart = parse(Int32, ends[1])
             orfalifrom = parse(Int32, bits[18])
             orfalito = parse(Int32, bits[19])
-            ali_from = orfstart + 3*(orfalifrom-1)
-            ali_length = 3*(orfalito - orfalifrom + 1)
+            ali_from = orfstart + 3 * (orfalifrom - 1)
+            ali_length = 3 * (orfalito - orfalifrom + 1)
             if ali_from > glength
                 ali_from = mod1(ali_from, glength)
             end
-            
+
             # note that model coordinates are converted to nucleotide coordinates
             push!(matches, FeatureMatch(orf, bits[4], strand, 3 * parse(Int, bits[16]) - 2, 3 * parse(Int, bits[17]), ali_from, ali_length, evalue))
         end
@@ -142,37 +155,39 @@ const start_codon_penalty = Dict(LongSequence{DNAAlphabet{4}}("ATT") => -9.47775
 function fix_start_and_stop_codons!(hmm_matches, trns, starts, startcodons, stops, glength)
 
     function is_possible_start(start, model_start, leftwindow, rightwindow, glength)
-        d = closestdistance(start, model_start, glength) 
+        d = closestdistance(start, model_start, glength)
         #must be in frame
         mod(d, 3) ≠ 0 && return false
-        if d > glength/2; d -= glength; end
+        if d > glength / 2
+            d -= glength
+        end
         d > leftwindow && return false
-        d < -rightwindow  && return false
+        d < -rightwindow && return false
         return true
     end
 
-    sort!(hmm_matches; by=x->x.target_from)
-    for (i,hmm_match) in enumerate(hmm_matches)
+    sort!(hmm_matches; by=x -> x.target_from)
+    for (i, hmm_match) in enumerate(hmm_matches)
         #println(hmm_match)
         @debug hmm_match
         hmmstart = hmm_match.target_from
 
-        upstream_cds = hmm_matches[mod1(i-1, length(hmm_matches))]
+        upstream_cds = hmm_matches[mod1(i - 1, length(hmm_matches))]
         @debug "upstream_cds: $(upstream_cds.query)"
 
         #this works because if no trn gene is upstream of the CDS start, this will select the last trn gene in the genome, which is upstream of the first CDS
-        trnidx = searchsortedfirst(trns, hmmstart, lt=(t,x)->t.fm.target_from < x)
-        upstream_tRNA = trns[mod1(trnidx-1, length(trns))]
-        distance_to_upstream_tRNA = circulardistance(upstream_tRNA.fm.target_from + upstream_tRNA.fm.target_length -1, hmmstart, glength)
+        trnidx = searchsortedfirst(trns, hmmstart, lt=(t, x) -> t.fm.target_from < x)
+        upstream_tRNA = trns[mod1(trnidx - 1, length(trns))]
+        distance_to_upstream_tRNA = circulardistance(upstream_tRNA.fm.target_from + upstream_tRNA.fm.target_length - 1, hmmstart, glength)
         @debug "upstream_tRNA: $(upstream_tRNA.fm.query)"
 
         inframe_stops = Int32[]
         for s in stops
-            append!(inframe_stops, filter(x->mod(circulardistance(x, hmmstart, glength),3) == 0, s))
+            append!(inframe_stops, filter(x -> mod(circulardistance(x, hmmstart, glength), 3) == 0, s))
         end
         sort!(inframe_stops)
         stop_idx = searchsortedfirst(inframe_stops, hmmstart)
-        upstream_stop = inframe_stops[mod1(stop_idx-1, length(inframe_stops))]
+        upstream_stop = inframe_stops[mod1(stop_idx - 1, length(inframe_stops))]
         distance_to_upstream_stop = circulardistance(upstream_stop, hmmstart, glength)
         @debug "$hmmstart, $distance_to_upstream_stop"
 
@@ -191,18 +206,18 @@ function fix_start_and_stop_codons!(hmm_matches, trns, starts, startcodons, stop
         #apply penalties
         penalties = zeros(Float64, length(possible_starts))
         # start codon penalty
-        for (i,ps) in enumerate(possible_starts)
+        for (i, ps) in enumerate(possible_starts)
             penalties[i] += START_CODON_PENALTY_WEIGHTING * start_codon_penalty[startcodons[ps]]
         end
         # scanning penalty
         if distance_to_upstream_tRNA < SCANNING_DISTANCE_THRESHOLD
-            idxs = sortperm(possible_starts, by = x->closestdistance(upstream_tRNA.fm.target_from + upstream_tRNA.fm.target_length -1, x, glength))
+            idxs = sortperm(possible_starts, by=x -> closestdistance(upstream_tRNA.fm.target_from + upstream_tRNA.fm.target_length - 1, x, glength))
             for (i, idx) in enumerate(idxs)
-                penalties[idx] -= SCANNING_PENALTY_WEIGHTING * (i-1)
+                penalties[idx] -= SCANNING_PENALTY_WEIGHTING * (i - 1)
             end
         end
         # intrusion/expansion penalty
-        for (i,ps) in enumerate(possible_starts)
+        for (i, ps) in enumerate(possible_starts)
             relative_to_hmm = closestdistance(hmmstart, ps, glength)
             if relative_to_hmm > 0
                 penalties[i] -= INTRUSION_PENALTY_WEIGHTING * relative_to_hmm
@@ -224,10 +239,10 @@ function fix_start_and_stop_codons!(hmm_matches, trns, starts, startcodons, stop
         next_stop = stops[frame][stop_idx]
         @debug "first stop: $next_stop"
         #modify HMM match
-        cds =  FeatureMatch(hmm_match.id, hmm_match.query, hmm_match.strand, 
-                hmm_match.model_from, hmm_match.model_to, beststart, circulardistance(beststart, next_stop, glength), hmm_match.evalue)
+        cds = FeatureMatch(hmm_match.id, hmm_match.query, hmm_match.strand,
+            hmm_match.model_from, hmm_match.model_to, beststart, circulardistance(beststart, next_stop, glength), hmm_match.evalue)
         #println(cds)
-        replace!(hmm_matches, hmm_match=>cds)
+        replace!(hmm_matches, hmm_match => cds)
     end
     return hmm_matches
 end
