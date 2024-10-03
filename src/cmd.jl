@@ -27,7 +27,7 @@ function get_args()
         @arghelp "file/dir for svg output"
         @argumentdefault String "info" loglevel "--loglevel"
         @arghelp "loglevel (info,warn,error,debug)"
-        @argumentoptional String tempdir "--tempdir"
+        @argumentoptional String tmpdir "--tempdir"
         @arghelp "directory to write temporary files into (defaults to /tmp or similar...)"
         @argumentflag failearly "--fail-early"
         @arghelp "if Emma fails on multiple FASTA inputs then fail immediately"
@@ -70,9 +70,9 @@ function main()
         return out
     end
 
-    tempdir = args[:tempdir]
-    if tempdir === nothing
-        tempdir = tempdir()
+    tmpdir = args[:tmpdir]
+    if tmpdir === nothing
+        tmpdir = tempdir()
     end
 
     if all([isnothing(a) for a in [args[:GFF_out], args[:FA_out], args[:SVG_out], args[:GB_out]]])
@@ -106,7 +106,7 @@ function main()
             @info "$fasta"
             emma(fasta; translation_table=translation_table, rotate_to=args[:rotate_to],
                 outfile_gff=outfile_gff, outfile_gb=outfile_gb, outfile_fa=outfile_fa,
-                outfile_svg=outfile_svg, tempdir=tempdir)
+                outfile_svg=outfile_svg, tempdir=tmpdir)
         catch e
             if e isa InterruptException
                 @info "Abort!"
