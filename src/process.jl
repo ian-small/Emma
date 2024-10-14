@@ -69,9 +69,10 @@ function rotate(rotate_to::String, GFFs, genome::CircularSequence)
         end
         genome = CircularSequence(append!(firstchunk, secondchunk))
     else
+        offset = 0
         @warn "Positional translation not possible due to missing feature: $rotate_to"
     end
-    GFFs, genome
+    GFFs, genome, offset
 end
 
 
@@ -187,7 +188,7 @@ function emma(tempfile::TempFile, infile::String; translation_table::Integer=2, 
     id, gffs, genome = emmaone(tempfile, infile, translation_table)
     glength = length(genome)
     if ~isnothing(rotate_to)
-        gffs, genome = rotate(rotate_to, gffs, genome)
+        gffs, genome, _ = rotate(rotate_to, gffs, genome)
     end
 
     if ~isnothing(outfile_fa)
