@@ -233,7 +233,7 @@ function fix_start_and_stop_codons!(hmm_matches, trns, starts, startcodons, stop
         frame = mod1(beststart, 3)
         stop_idx = searchsortedfirst(stops[frame], beststart) #index of first in-frame stop following best start codon
         if stop_idx == length(stops[frame]) + 1 #no stop before end of genome
-            frame = 3 - mod1(glength - beststart, 3)
+            frame = 3 - mod(glength - beststart, 3)
             stop_idx = searchsortedfirst(stops[frame], 1) #restart search from start of genome in the correct frame
         end
         next_stop = stops[frame][stop_idx]

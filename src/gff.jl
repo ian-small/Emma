@@ -180,9 +180,8 @@ function writeGFF(id::AbstractString, gffs::Vector{GFF}, glength::Integer, out::
     write(out, "##sequence-region	$id	1	$glength\n")
     write(out, "$id	Emma	region	1	$glength	.	+	0	Is_circular=true\n")
     for gff in gffs
-        write(out, join([id, gff.source, gff.ftype, gff.fstart, gff.fend, gff.score, gff.strand, gff.phase, gff.attributes], "\t"), "\n")
+        write(out, id, "\t", gff.source, "\t", gff.ftype, "\t", gff.fstart, "\t", gff.fend, "\t", gff.score, "\t", gff.strand, "\t", gff.phase, "\t", gff.attributes, "\n")
     end
-
 end
 
 #= function is_encompassed(outer_gene, inner_gene)
