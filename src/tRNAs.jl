@@ -120,6 +120,8 @@ function parse_trn_alignments(file::String, glength::Integer)
             readline(infile) #header line
             readline(infile) #dashes
             bits = split(readline(infile), " ", keepempty=false)
+            evalue = parse(Float64, bits[3])
+            evalue > 1e-5 && continue
             readline(infile) #blank
             readline(infile) #NC
             readline(infile) #CS
@@ -145,13 +147,14 @@ function parse_trn_alignments(file::String, glength::Integer)
             expected = trn2anticodon[trn]
             anticod = anticodon(qfrom, qseq, tseq, model2anticodonpos[query])
             if haskey(anticodon2trn, anticod) == true
-                push!(trns, tRNA(FeatureMatch(target, anticodon2trn[anticod], tstrand, qfrom, parse(Int, bits[8]), target_from, tto - target_from + 1, parse(Float64, bits[3])), anticod, false))
+                push!(trns, tRNA(FeatureMatch(target, anticodon2trn[anticod], tstrand, qfrom, parse(Int, bits[8]), target_from, tto - target_from + 1, evalue), anticod, false))
             else
-                push!(trns, tRNA(FeatureMatch(target, trn, tstrand, qfrom, parse(Int, bits[8]), target_from, tto - target_from + 1, parse(Float64, bits[3])), anticod, false))
+                push!(trns, tRNA(FeatureMatch(target, trn, tstrand, qfrom, parse(Int, bits[8]), target_from, tto - target_from + 1, evalue), anticod, false))
             end
         end
     end
-    filter!(x -> x.fm.evalue < 1e-5, trns)
+    #filter!(x -> x.fm.evalue < 1e-5, trns)
+    trns
 end
 
 function cmsearch(tempfile::TempFile, modeldir::String, modelfile::String)
